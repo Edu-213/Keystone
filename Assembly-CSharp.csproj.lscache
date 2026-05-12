@@ -54,8 +54,14 @@ Assets/
  TutorialInfo/Scripts/Readme.cs
  _Keystone/Runtime/Scripts/Networking/
   GameNetworkManager.cs
+  SceneSyncController.cs
   SteamLobbyHandler.cs
   SteamNetcodeBridge.cs
+ _Keystone/Runtime/Scripts/SceneManagement/
+  SceneGroup.cs
+  SceneGroupManager.cs
+  SceneLoader.cs
+  SceneManagementBootstrapper.cs
 Temp/obj/Assembly-CSharp/.NETStandard,Version=v2.1.AssemblyAttributes.cs
 
 [metadataReferences]
@@ -319,17 +325,20 @@ C:/Program Files/Unity/Hub/Editor/6000.3.11f1/Editor/Data/NetStandard/compat/2.1
 C:/Program Files/Unity/Hub/Editor/6000.3.11f1/Editor/Data/NetStandard/
  Extensions/2.0.0/System.Runtime.InteropServices.WindowsRuntime.dll
  ref/2.1.0/netstandard.dll
-Library/PackageCache/com.unity.collections@aea9d3bd5e19/
- Unity.Collections.LowLevel.ILSupport/Unity.Collections.LowLevel.ILSupport.dll
- Unity.Collections.Tests/
-  System.IO.Hashing/System.IO.Hashing.dll
-  System.Runtime.CompilerServices.Unsafe/System.Runtime.CompilerServices.Unsafe.dll
 Library/PackageCache/
+ com.eflatun.scenereference@6821c571090f/ThirdParty/Ignore/Ignore.dll
+ com.unity.collections@aea9d3bd5e19/
+  Unity.Collections.LowLevel.ILSupport/Unity.Collections.LowLevel.ILSupport.dll
+  Unity.Collections.Tests/
+   System.IO.Hashing/System.IO.Hashing.dll
+   System.Runtime.CompilerServices.Unsafe/System.Runtime.CompilerServices.Unsafe.dll
  com.unity.ext.nunit@d8c07649098d/net40/unity-custom/nunit.framework.dll
  com.unity.nuget.mono-cecil@ecb9724e46ff/Mono.Cecil.dll
  com.unity.nuget.newtonsoft-json@4dfd81071c64/Runtime/Newtonsoft.Json.dll
  com.unity.visualscripting@eb6004dcc707/Runtime/VisualScripting.Flow/Dependencies/NCalc/Unity.VisualScripting.Antlr3.Runtime.dll
 Library/ScriptAssemblies/
+ Eflatun.SceneReference.dll
+ Eflatun.SceneReference.Editor.dll
  PPv2URPConverters.dll
  Unity.AI.Navigation.dll
  Unity.AI.Navigation.Editor.ConversionSystem.dll
@@ -369,6 +378,7 @@ Library/ScriptAssemblies/
  Unity.RenderPipelines.Universal.Shaders.dll
  Unity.Rider.Editor.dll
  Unity.Searcher.Editor.dll
+ Unity.Settings.Editor.dll
  Unity.ShaderGraph.Editor.dll
  Unity.TextMeshPro.dll
  Unity.TextMeshPro.Editor.dll
@@ -390,10 +400,6 @@ Library/ScriptAssemblies/
 Temp/bin/Debug/Facepunch Transport for Netcode for GameObjects.dll
 
 [analyzerReferences]
-Assets/_Keystone/Runtime/Steam/Plugins/Unity/
- Facepunch.Steamworks.Posix.dll
- Facepunch.Steamworks.Win32.dll
- Facepunch.Steamworks.Win64.dll
 C:/Program Files/Unity/Hub/Editor/6000.3.11f1/Editor/Data/Tools/BuildPipeline/Unity.SourceGenerators/
  Unity.Properties.SourceGenerator.dll
  Unity.SourceGenerators.dll

@@ -322,17 +322,18 @@ C:/Program Files/Unity/Hub/Editor/6000.3.11f1/Editor/Data/PlaybackEngines/
  LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
  WebGLSupport/UnityEditor.WebGL.Extensions.dll
  WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
-Library/PackageCache/com.unity.collab-proxy@a5329f833fa8/Lib/Editor/
- log4netPlastic.dll
- Unity.Plastic.Antlr3.Runtime.dll
- Unity.Plastic.Newtonsoft.Json.dll
- unityplastic.dll
-Library/PackageCache/com.unity.collections@aea9d3bd5e19/
- Unity.Collections.LowLevel.ILSupport/Unity.Collections.LowLevel.ILSupport.dll
- Unity.Collections.Tests/
-  System.IO.Hashing/System.IO.Hashing.dll
-  System.Runtime.CompilerServices.Unsafe/System.Runtime.CompilerServices.Unsafe.dll
 Library/PackageCache/
+ com.eflatun.scenereference@6821c571090f/ThirdParty/Ignore/Ignore.dll
+ com.unity.collab-proxy@a5329f833fa8/Lib/Editor/
+  log4netPlastic.dll
+  Unity.Plastic.Antlr3.Runtime.dll
+  Unity.Plastic.Newtonsoft.Json.dll
+  unityplastic.dll
+ com.unity.collections@aea9d3bd5e19/
+  Unity.Collections.LowLevel.ILSupport/Unity.Collections.LowLevel.ILSupport.dll
+  Unity.Collections.Tests/
+   System.IO.Hashing/System.IO.Hashing.dll
+   System.Runtime.CompilerServices.Unsafe/System.Runtime.CompilerServices.Unsafe.dll
  com.unity.ext.nunit@d8c07649098d/net40/unity-custom/nunit.framework.dll
  com.unity.nuget.mono-cecil@ecb9724e46ff/Mono.Cecil.dll
  com.unity.nuget.newtonsoft-json@4dfd81071c64/Runtime/Newtonsoft.Json.dll
@@ -348,10 +349,6 @@ Library/ScriptAssemblies/
  UnityEngine.UI.dll
 
 [analyzerReferences]
-Assets/_Keystone/Runtime/Steam/Plugins/Unity/
- Facepunch.Steamworks.Posix.dll
- Facepunch.Steamworks.Win32.dll
- Facepunch.Steamworks.Win64.dll
 C:/Program Files/Unity/Hub/Editor/6000.3.11f1/Editor/Data/Tools/BuildPipeline/Unity.SourceGenerators/
  Unity.Properties.SourceGenerator.dll
  Unity.SourceGenerators.dll

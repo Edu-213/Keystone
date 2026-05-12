@@ -2,6 +2,7 @@ using Netcode.Transports.Facepunch;
 using Unity.Netcode;
 using Steamworks;
 using UnityEngine;
+using Assets.Scripts.Core.Network;
 
 namespace Assets._Keystone.Runtime.Scripts.Networking
 {
@@ -11,6 +12,9 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
         [SerializeField] private NetworkManager networkManager;
         [SerializeField] private FacepunchTransport facepunchTransport;
+        [SerializeField] private SceneSyncController sceneSyncController;
+
+        private int pendingHostSceneIndex = -1;
 
         private void Awake()
         {
@@ -28,9 +32,25 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
             if (facepunchTransport == null && networkManager != null)
                 facepunchTransport = networkManager.GetComponent<FacepunchTransport>();
+
+            if (sceneSyncController == null)
+                sceneSyncController = FindFirstObjectByType<SceneSyncController>();
         }
 
-        public bool StartHost()
+        private void OnEnable()
+        {
+            if (networkManager != null)
+                networkManager.OnServerStarted += HandleServerStarted;
+        }
+
+        private void OnDisable()
+        {
+            if (networkManager != null)
+                networkManager.OnServerStarted -= HandleServerStarted;
+        }
+
+
+        public bool StartHost(int sceneIndexAfterStart = -1)
         {
             if (!CanUseNetworkManager())
                 return false;
@@ -40,6 +60,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 Debug.LogWarning("[Netcode] Já existe uma sessão ativa.");
                 return false;
             }
+            pendingHostSceneIndex = sceneIndexAfterStart;
 
             bool success = networkManager.StartHost();
             Debug.Log(success
@@ -47,6 +68,26 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 : "[Netcode] Falha ao iniciar host.");
 
             return success;
+        }
+
+        private void HandleServerStarted()
+        {
+            if (pendingHostSceneIndex < 0)
+                return;
+
+            if (sceneSyncController == null)
+                sceneSyncController = FindFirstObjectByType<SceneSyncController>();
+
+            if (sceneSyncController == null)
+            {
+                Debug.LogError("[Netcode] SceneSyncController não encontrado.");
+                return;
+            }
+
+            int indexToLoad = pendingHostSceneIndex;
+            pendingHostSceneIndex = -1;
+
+            sceneSyncController.HostLoadSceneGroupAsync(indexToLoad);
         }
 
         public bool StartClient(SteamId hostSteamId)
@@ -60,13 +101,20 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 return false;
             }
 
-            if (facepunchTransport == null)
+            if (networkManager.NetworkConfig.NetworkTransport is Netcode.Transports.Facepunch.FacepunchTransport)
             {
-                Debug.LogError("[Netcode] FacepunchTransport não encontrado.");
-                return false;
+                if (facepunchTransport == null)
+                {
+                    Debug.LogError("[Netcode] FacepunchTransport não encontrado.");
+                    return false;
+                }
+                facepunchTransport.targetSteamId = hostSteamId;
             }
-
-            facepunchTransport.targetSteamId = hostSteamId;
+            else
+            {
+                Debug.Log("[Netcode] Usando transporte padrão (Provavelmente UnityTransport).");
+                // Aqui o UnityTransport usará o IP/Porta definidos no componente no Inspector
+            }
 
             bool success = networkManager.StartClient();
             Debug.Log(success
