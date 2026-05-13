@@ -10,10 +10,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         private void Awake()
         {
-            // Apenas uma linha no objeto pai protege todos os 20 sistemas
             DontDestroyOnLoad(gameObject);
-
-            Debug.Log("Sistemas Globais inicializados e protegidos.");
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

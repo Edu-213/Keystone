@@ -10,15 +10,19 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
     {
         public string GroupName = "New Scene Group";
         public List<SceneData> Scenes;
+        private string _activeSceneName;
+
+        public void InitializeCache()
+        {
+            _activeSceneName = Scenes.FirstOrDefault(s => s.SceneType == SceneType.ActiveScene)?.reference.Name;
+        }
 
         public string FindSceneNameByType(SceneType sceneType)
         {
-            return Scenes.FirstOrDefault(scene => scene.SceneType == sceneType)?.reference.Name;
-        }
+            if (_activeSceneName == null && sceneType == SceneType.ActiveScene)
+                InitializeCache();
 
-        public List<SceneData> GetLocalScenes()
-        {
-            return Scenes.Where(s => s.SceneType != SceneType.ActiveScene).ToList();
+            return sceneType == SceneType.ActiveScene ? _activeSceneName : Scenes.FirstOrDefault(s => s.SceneType == sceneType)?.reference.Name;
         }
     }
 

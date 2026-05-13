@@ -15,15 +15,16 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         public SceneGroup ActiveSceneGroup { get; private set; }
 
-        public async Task LoadAllScenes(SceneGroup group, IProgress<float> progress, bool reloadDupScenes = false)
+        public async Task LoadScenes(SceneGroup group, Func<SceneData, bool> sceneFilter = null, IProgress<float> progress = null, bool reloadDupScenes = false, bool unloadExisting = true)
         {
             ActiveSceneGroup = group;
 
-            await UnloadScenes();
+            if (unloadExisting) await UnloadScenes();
 
             var loadedScenes = GetCurrentlyLoadedSceneNames();
-            var scenesToLoad = group.Scenes.Where(scene => reloadDupScenes || !loadedScenes.Contains(scene.Name)).ToList();
+            sceneFilter ??= _ => true;
 
+            var scenesToLoad = group.Scenes.Where(scene => sceneFilter(scene) && (reloadDupScenes || !loadedScenes.Contains(scene.Name))).ToList();
             var operationGroup = new AsyncOperationGroup(scenesToLoad.Count);
 
             foreach (var sceneData in scenesToLoad)
@@ -38,37 +39,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             while (!operationGroup.IsDone)
             {
                 progress?.Report(operationGroup.Progress);
-                await Task.Delay(100);
-            }
-
-            SetUnityActiveScene(group.FindSceneNameByType(SceneType.ActiveScene));
-            OnSceneGroupLoaded.Invoke();
-        }
-
-        public async Task LoadLocalScenesOnly(SceneGroup group, IProgress<float> progress = null, bool reloadDupScenes = false)
-        {
-            ActiveSceneGroup = group;
-
-            var loadedScenes = GetCurrentlyLoadedSceneNames();
-            var scenesToLoad = group.GetLocalScenes()
-                .Where(scene => reloadDupScenes || !loadedScenes.Contains(scene.Name))
-                .ToList();
-
-            var operationGroup = new AsyncOperationGroup(scenesToLoad.Count);
-
-            foreach (var sceneData in scenesToLoad)
-            {
-                var operation = SceneManager.LoadSceneAsync(sceneData.Path, LoadSceneMode.Additive);
-                if (operation == null) continue;
-
-                operationGroup.Operations.Add(operation);
-                OnSceneLoaded.Invoke(sceneData.Name);
-            }
-
-            while (!operationGroup.IsDone)
-            {
-                progress?.Report(operationGroup.Progress);
-                await Task.Delay(100);
+                await Task.Yield();
             }
 
             SetUnityActiveScene(group.FindSceneNameByType(SceneType.ActiveScene));
@@ -152,7 +123,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
             while (!operationGroup.IsDone)
             {
-                await Task.Delay(100); // delay to avoid tight loop
+                await Task.Yield();
             }
         }
 
@@ -189,9 +160,9 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             OnSceneUnloaded.Invoke(sceneName);
         }
 
-        private List<string> GetCurrentlyLoadedSceneNames()
+        private HashSet<string> GetCurrentlyLoadedSceneNames()
         {
-            var loadedScenes = new List<string>();
+            var loadedScenes = new HashSet<string>();
 
             int sceneCount = SceneManager.sceneCount;
             for (int i = 0; i < sceneCount; i++)
@@ -219,7 +190,20 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
     public readonly struct AsyncOperationGroup
     {
         public readonly List<AsyncOperation> Operations;
-        public float Progress => Operations.Count == 0 ? 1f : Operations.Average(o => o.progress);
+        public float Progress
+        {
+            get
+            {
+                if (Operations.Count == 0) return 1f;
+                float total = 0;
+                for (int i = 0; i < Operations.Count; i++)
+                {
+                    total += Operations[i].progress;
+                }
+
+                return total / Operations.Count;
+            }   
+        }
         public bool IsDone => Operations.Count == 0 || Operations.All(o => o.isDone);
 
         public AsyncOperationGroup(int initialCapacity)

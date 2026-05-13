@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Netcode;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -22,38 +21,13 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
         private bool _isFirstLoad = true;
         private float _targetProgress;
         private bool isLoading;
+        private bool _isLoadingGroup = false;
 
         public readonly SceneGroupManager manager = new SceneGroupManager();
 
         private SceneGroup _pendingNetworkGroup;
         private TaskCompletionSource<bool> _networkSceneLoadedTcs;
         private bool _networkCallbacksRegistered;
-
-        /*
-                private void Awake()
-                {
-                    manager.OnSceneLoaded += sceneName => Debug.Log("Loaded:" + sceneName);
-                    manager.OnSceneUnloaded += sceneName => Debug.Log("Unloaded:" + sceneName);
-                    manager.OnSceneGroupLoaded += () => Debug.Log("Scene group loaded");
-
-                }
-        */
-
-        private void OnLocalClientConnected(ulong id)
-        {
-            Debug.Log("teste");
-            if (id == NetworkManager.Singleton.LocalClientId)
-            {
-                Debug.Log("[SceneLoader] Cliente conectado. Registrando escuta de cenas...");
-                // O Netcode garante que agora o SceneManager existe
-                RegisterNetworkCallbacksIfPossible();
-            }
-        }
-
-        private void OnDisable()
-        {
-            UnregisterNetworkCallbacks();
-        }
 
         private async void Start()
         {
@@ -65,33 +39,54 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
         {
             if (!isLoading) return;
 
-            float currentFillAmount = _loadingBar.fillAmount;
-            float progressDifference = Mathf.Abs(currentFillAmount - _targetProgress);
+            _loadingBar.fillAmount = Mathf.MoveTowards(_loadingBar.fillAmount, _targetProgress, _fillSpeed * Time.deltaTime);
+        }
 
-            float dynamicFillSpeed = progressDifference * _fillSpeed;
+        private void OnDestroy()
+        {
+            UnregisterNetworkCallbacks();
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback -= OnLocalClientConnected;
+            }
+        }
 
-            _loadingBar.fillAmount = Mathf.Lerp(currentFillAmount, _targetProgress, Time.deltaTime * dynamicFillSpeed);
+        private void OnLocalClientConnected(ulong id)
+        {
+            Debug.Log($"[CLIENT CONNECTED] id={id} local={NetworkManager.Singleton.LocalClientId}");
+            
+            if (id == NetworkManager.Singleton.LocalClientId)
+            {
+                Debug.Log("[SceneLoader] Cliente conectado. Registrando escuta de cenas...");
+                RegisterNetworkCallbacksIfPossible();
+            }
         }
 
         public SceneGroup GetSceneGroup(int index)
         {
-            if (index < 0 || index >= _sceneGroups.Length)
-                return null;
+            if (index < 0 || index >= _sceneGroups.Length) return null;
 
             return _sceneGroups[index];
         }
 
         public async Task LoadSceneGroup(int index, bool useNetworkScene)
         {
+            if (_isLoadingGroup)
+            {
+                Debug.LogWarning("LoadSceneGroup chamado enquanto outro carregamento está em andamento!");
+                return;
+            }
+
             Time.timeScale = 1f;
 
             var group = GetSceneGroup(index);
             if (group == null)
             {
-                Debug.LogError("Invalid scene group index:" + index);
+                Debug.LogError("Invalid scene group index");
                 return;
             }
 
+            _isLoadingGroup = true;
             bool isMainMenu = index == 0;
             bool showLoading = !isMainMenu || !_isFirstLoad;
 
@@ -124,6 +119,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
                 }
 
                 _isFirstLoad = false;
+                _isLoadingGroup = false;
             }
         }
 
@@ -132,7 +128,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             var progress = new LoadingProgress();
             progress.Progressed += value => _targetProgress = Mathf.Max(_targetProgress, value);
 
-            await manager.LoadAllScenes(group, progress);
+            await manager.LoadScenes(group, null, progress, reloadDupScenes: false, unloadExisting: true); ;
         }
 
         private async Task LoadSceneGroupMultiplayer(SceneGroup group)
@@ -155,7 +151,6 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             _networkSceneLoadedTcs = new TaskCompletionSource<bool>();
 
             string networkSceneName = group.FindSceneNameByType(SceneType.ActiveScene);
-
             if (string.IsNullOrEmpty(networkSceneName))
             {
                 Debug.LogError($"SceneGroup {group.GroupName} has no ActiveScene.");
@@ -173,11 +168,17 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         private async void HandleNetworkSceneEvent(SceneEvent sceneEvent)
         {
+            Debug.Log($"[SCENE EVENT] type={sceneEvent.SceneEventType} clientId={sceneEvent.ClientId} local={NetworkManager.Singleton.LocalClientId}");
+
             if (sceneEvent.ClientId != NetworkManager.Singleton.LocalClientId)
+            {
+                Debug.Log("[SCENE EVENT] Ignorado porque clientId != localClientId");
                 return;
+            }
 
             if (sceneEvent.SceneEventType == SceneEventType.Load)
             {
+                Debug.Log("[SCENE EVENT] Recebeu LOAD. Vai chamar ShowLoading()");
                 ShowLoading();
                 _targetProgress = 0.15f;
 
@@ -196,21 +197,15 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         private async void HandleNetworkLoadEventCompleted(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
         {
-            if (_pendingNetworkGroup == null)
-                return;
+            if (_pendingNetworkGroup == null) return;
 
             string expectedScene = _pendingNetworkGroup.FindSceneNameByType(SceneType.ActiveScene);
-            if (sceneName != expectedScene)
-                return;
+            if (sceneName != expectedScene) return;
 
             var progress = new LoadingProgress();
-            progress.Progressed += value =>
-            {
-                float localRange = Mathf.Lerp(0.8f, 1f, value);
-                _targetProgress = Mathf.Max(_targetProgress, localRange);
-            };
+            progress.Progressed += value => _targetProgress = Mathf.Lerp(0.8f, 1f, value);
 
-            await manager.LoadLocalScenesOnly(_pendingNetworkGroup, progress);
+            await manager.LoadScenes(_pendingNetworkGroup, s => s.SceneType != SceneType.ActiveScene, progress, reloadDupScenes: false, unloadExisting: false);
 
             _targetProgress = 1f;
             _networkSceneLoadedTcs?.TrySetResult(true);
@@ -218,17 +213,19 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         private void RegisterNetworkCallbacksIfPossible()
         {
+             Debug.Log("[REGISTER] Tentando registrar callbacks de rede...");
             if (_networkCallbacksRegistered) return;
             if (NetworkManager.Singleton == null) return;
 
-            if (NetworkManager.Singleton.SceneManager == null)
+            var sceneManager = NetworkManager.Singleton.SceneManager;
+            if (sceneManager == null)
             {
                 Debug.LogWarning("[SceneLoader] NetworkSceneManager ainda não está pronto.");
                 return;
             }
-
-            NetworkManager.Singleton.SceneManager.OnSceneEvent += HandleNetworkSceneEvent;
-            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += HandleNetworkLoadEventCompleted;
+            Debug.Log("[REGISTER] Registrando OnSceneEvent e OnLoadEventCompleted");
+            sceneManager.OnSceneEvent += HandleNetworkSceneEvent;
+            sceneManager.OnLoadEventCompleted += HandleNetworkLoadEventCompleted;
             _networkCallbacksRegistered = true;
         }
 
@@ -237,8 +234,10 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             if (!_networkCallbacksRegistered) return;
             if (NetworkManager.Singleton == null) return;
 
-            NetworkManager.Singleton.SceneManager.OnSceneEvent -= HandleNetworkSceneEvent;
-            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= HandleNetworkLoadEventCompleted;
+            var sceneManager = NetworkManager.Singleton.SceneManager;
+
+            sceneManager.OnSceneEvent -= HandleNetworkSceneEvent;
+            sceneManager.OnLoadEventCompleted -= HandleNetworkLoadEventCompleted;
             _networkCallbacksRegistered = false;
         }
 

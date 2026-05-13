@@ -37,18 +37,25 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 sceneSyncController = FindFirstObjectByType<SceneSyncController>();
         }
 
-        private void OnEnable()
+        private void Start()
         {
             if (networkManager != null)
+            {
                 networkManager.OnServerStarted += HandleServerStarted;
+                networkManager.OnServerStopped += HandleServerStopped;
+                networkManager.OnClientDisconnectCallback += HandleClientDisconnect;
+            }
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
             if (networkManager != null)
+            {
                 networkManager.OnServerStarted -= HandleServerStarted;
+                networkManager.OnServerStopped -= HandleServerStopped;
+                networkManager.OnClientDisconnectCallback -= HandleClientDisconnect;
+            }
         }
-
 
         public bool StartHost(int sceneIndexAfterStart = -1)
         {
@@ -87,7 +94,13 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             int indexToLoad = pendingHostSceneIndex;
             pendingHostSceneIndex = -1;
 
-            sceneSyncController.HostLoadSceneGroupAsync(indexToLoad);
+            sceneSyncController.HostLoadSceneGroupWrapper(indexToLoad);
+        }
+
+        private void HandleServerStopped(bool isServer)
+        {
+            Debug.Log("[Netcode] Servidor parado localmente.");
+            LeaveSession();
         }
 
         public bool StartClient(SteamId hostSteamId)
@@ -122,6 +135,26 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 : "[Netcode] Falha ao iniciar client.");
 
             return success;
+        }
+
+        private void HandleClientDisconnect(ulong clientId)
+        {
+            if (!networkManager.IsServer)
+            {
+                Debug.LogWarning("[Netcode] Host caiu. Voltando para o menu...");
+                LeaveSession();
+            }
+        }
+
+        public void LeaveSession()
+        {
+            Shutdown();
+            if (sceneSyncController != null)
+            {
+                _ = sceneSyncController.LoadMainMenuAfterShutdown();
+            }
+
+            Debug.Log("[Netcode] Saindo da sessão e voltando ao menu...");
         }
 
         public void Shutdown()
