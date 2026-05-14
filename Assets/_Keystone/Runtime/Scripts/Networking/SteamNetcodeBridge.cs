@@ -3,6 +3,7 @@ using Unity.Netcode;
 using Steamworks;
 using UnityEngine;
 using Assets.Scripts.Core.Network;
+using Assets._Keystone.Runtime.Scripts.SceneManagement;
 
 namespace Assets._Keystone.Runtime.Scripts.Networking
 {
@@ -14,7 +15,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
         [SerializeField] private FacepunchTransport facepunchTransport;
         [SerializeField] private SceneSyncController sceneSyncController;
 
-        private int pendingHostSceneIndex = -1;
+        private SceneGroup pendingHostSceneGroup = null;
 
         private void Awake()
         {
@@ -57,17 +58,20 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             }
         }
 
-        public bool StartHost(int sceneIndexAfterStart = -1)
+        public bool StartHost(SceneGroup sceneGroupAfterStart = null)
         {
             if (!CanUseNetworkManager())
                 return false;
+
+            _isLeavingManually = false;
+            _isReturningToMenu = false;
 
             if (networkManager.IsListening)
             {
                 Debug.LogWarning("[Netcode] Já existe uma sessão ativa.");
                 return false;
             }
-            pendingHostSceneIndex = sceneIndexAfterStart;
+            pendingHostSceneGroup = sceneGroupAfterStart;
 
             bool success = networkManager.StartHost();
             Debug.Log(success
@@ -79,11 +83,8 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
         private void HandleServerStarted()
         {
-            if (pendingHostSceneIndex < 0)
+            if (pendingHostSceneGroup == null)
                 return;
-
-            if (sceneSyncController == null)
-                sceneSyncController = FindFirstObjectByType<SceneSyncController>();
 
             if (sceneSyncController == null)
             {
@@ -91,22 +92,25 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 return;
             }
 
-            int indexToLoad = pendingHostSceneIndex;
-            pendingHostSceneIndex = -1;
+            SceneGroup groupToLoad = pendingHostSceneGroup;
+            pendingHostSceneGroup = null;
 
-            sceneSyncController.HostLoadSceneGroupWrapper(indexToLoad);
+            sceneSyncController.HostLoadSceneGroupWrapper(groupToLoad);
         }
 
         private void HandleServerStopped(bool isServer)
         {
             Debug.Log("[Netcode] Servidor parado localmente.");
-            LeaveSession();
+            ReturnToMenuOnce();
         }
 
         public bool StartClient(SteamId hostSteamId)
         {
             if (!CanUseNetworkManager())
                 return false;
+
+            _isLeavingManually = false;
+            _isReturningToMenu = false;
 
             if (networkManager.IsListening)
             {
@@ -126,7 +130,6 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             else
             {
                 Debug.Log("[Netcode] Usando transporte padrão (Provavelmente UnityTransport).");
-                // Aqui o UnityTransport usará o IP/Porta definidos no componente no Inspector
             }
 
             bool success = networkManager.StartClient();
@@ -134,27 +137,69 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 ? $"[Netcode] Client iniciado para host {hostSteamId}."
                 : "[Netcode] Falha ao iniciar client.");
 
+            if (success)
+            {
+                if (sceneSyncController == null)
+                    sceneSyncController = FindFirstObjectByType<SceneSyncController>();
+
+                var sceneLoader = FindFirstObjectByType<SceneLoader>();
+                sceneLoader?.RegisterNetworkCallbacks();
+            }
+
             return success;
         }
 
+        private bool _isLeavingManually;
+        private bool _isReturningToMenu;
         private void HandleClientDisconnect(ulong clientId)
         {
-            if (!networkManager.IsServer)
+            if (clientId != NetworkManager.Singleton.LocalClientId)
+                return;
+
+            if (_isLeavingManually)
             {
-                Debug.LogWarning("[Netcode] Host caiu. Voltando para o menu...");
-                LeaveSession();
+                Debug.Log("[Netcode] Cliente saiu manualmente.");
+                _isLeavingManually = false;
             }
+            else
+            {
+                Debug.LogWarning("[Netcode] Sessão encerrada.");
+            }
+
+            CleanupSceneLoadingState();
+            ReturnToMenuOnce();
         }
 
         public void LeaveSession()
         {
-            Shutdown();
-            if (sceneSyncController != null)
-            {
-                _ = sceneSyncController.LoadMainMenuAfterShutdown();
-            }
+            if (networkManager == null || !networkManager.IsListening || _isLeavingManually)
+                return;
+
+            _isLeavingManually = true;
+            networkManager.Shutdown();
 
             Debug.Log("[Netcode] Saindo da sessão e voltando ao menu...");
+            CleanupSceneLoadingState();
+        }
+
+        private void CleanupSceneLoadingState()
+        {
+            var sceneLoader = FindFirstObjectByType<SceneLoader>();
+            sceneLoader?.ResetNetworkLoadingState();
+        }
+
+        private void ReturnToMenuOnce()
+        {
+            if (_isReturningToMenu)
+                return;
+
+            _isReturningToMenu = true;
+
+            if (sceneSyncController == null)
+                sceneSyncController = FindFirstObjectByType<SceneSyncController>();
+
+            if (sceneSyncController != null)
+                _ = sceneSyncController.LoadMainMenuAfterShutdown();
         }
 
         public void Shutdown()

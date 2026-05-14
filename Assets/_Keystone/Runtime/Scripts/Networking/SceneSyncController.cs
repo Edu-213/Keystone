@@ -11,7 +11,7 @@ namespace Assets.Scripts.Core.Network
     public class SceneSyncController : NetworkBehaviour
     {
         [SerializeField] private SceneManagementBootstrapper sceneBootstrapper;
-        private int currentSceneGroupIndex = -1;
+        private SceneGroup currentSceneGroup = null;
         private bool playersSpawnedForCurrentLoad;
         private bool _isLoadingGroup = false;
 
@@ -39,12 +39,12 @@ namespace Assets.Scripts.Core.Network
             }
         }
 
-        public void HostLoadSceneGroupWrapper(int sceneIndex)
+        public void HostLoadSceneGroupWrapper(SceneGroup group)
         {
-            _ = HostLoadSceneGroup(sceneIndex);
+            _ = HostLoadSceneGroup(group);
         }
 
-        private async Task HostLoadSceneGroup(int sceneIndex)
+        private async Task HostLoadSceneGroup(SceneGroup group)
         {
             if (!IsServer) return;
             if (_isLoadingGroup)
@@ -56,10 +56,10 @@ namespace Assets.Scripts.Core.Network
             _isLoadingGroup = true;
             try
             {
-                currentSceneGroupIndex = sceneIndex;
+                currentSceneGroup = group;
                 playersSpawnedForCurrentLoad = false;
 
-                await sceneBootstrapper.SceneLoader.LoadSceneGroup(sceneIndex, useNetworkScene: true);
+                await sceneBootstrapper.SceneLoader.LoadSceneGroup(group, useNetworkScene: true);
             }
             finally
             {
@@ -75,12 +75,9 @@ namespace Assets.Scripts.Core.Network
         {
             if (!IsServer) return;
             if (playersSpawnedForCurrentLoad) return;
-            if (currentSceneGroupIndex < 0) return;
+            if (currentSceneGroup == null) return;
 
-            var group = sceneBootstrapper.SceneLoader.GetSceneGroup(currentSceneGroupIndex);
-            if (group == null) return;
-
-            string activeSceneName = group.FindSceneNameByType(SceneType.ActiveScene);
+            string activeSceneName = currentSceneGroup.FindSceneNameByType(SceneType.ActiveScene);
             if (sceneName != activeSceneName) return;
 
             playersSpawnedForCurrentLoad = true;
@@ -114,7 +111,8 @@ namespace Assets.Scripts.Core.Network
                 }
             }
 
-            await sceneBootstrapper.SceneLoader.LoadSceneGroup(0, useNetworkScene: false);
+            var mainGroup = sceneBootstrapper.SceneLoader.MainMenuGroup;
+            await sceneBootstrapper.SceneLoader.LoadSceneGroup(mainGroup, useNetworkScene: false);
             //GameUtils.ShowCursor(true);
         }
 

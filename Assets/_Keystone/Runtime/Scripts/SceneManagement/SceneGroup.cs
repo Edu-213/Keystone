@@ -2,28 +2,39 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Eflatun.SceneReference;
+using UnityEngine;
 
 namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 {
-    [Serializable]
-    public class SceneGroup
+    [CreateAssetMenu(fileName = "SceneGroup", menuName = "Keystone/Scene Management/Scene Group")]
+    public class SceneGroup : ScriptableObject
     {
-        public string GroupName = "New Scene Group";
+        public string GroupName;
         public List<SceneData> Scenes;
-        private string _activeSceneName;
 
-        public void InitializeCache()
+        private Dictionary<SceneType, string> _sceneCache;
+        public void OnEnable() => _sceneCache = null;
+
+        private void PopulateCache()
         {
-            _activeSceneName = Scenes.FirstOrDefault(s => s.SceneType == SceneType.ActiveScene)?.reference.Name;
+            _sceneCache = new Dictionary<SceneType, string>();
+            foreach (var scene in Scenes)
+            {
+                if (!_sceneCache.ContainsKey(scene.SceneType))
+                {
+                    _sceneCache.Add(scene.SceneType, scene.reference.Name);
+                }
+            }
         }
 
         public string FindSceneNameByType(SceneType sceneType)
         {
-            if (_activeSceneName == null && sceneType == SceneType.ActiveScene)
-                InitializeCache();
+            if (_sceneCache == null) PopulateCache();
 
-            return sceneType == SceneType.ActiveScene ? _activeSceneName : Scenes.FirstOrDefault(s => s.SceneType == sceneType)?.reference.Name;
+            return _sceneCache.TryGetValue(sceneType, out var sceneName) ? sceneName : null;
         }
+
+        public string GetActiveSceneName() => FindSceneNameByType(SceneType.ActiveScene);
     }
 
     [Serializable]

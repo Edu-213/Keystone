@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Steamworks;
 using Steamworks.Data;
-using Unity.Netcode;
 using UnityEngine;
 
 namespace Assets._Keystone.Runtime.Scripts.Networking
@@ -41,32 +40,6 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
         // ==========================================================
         //Functions tests
-        public void OnClickHost()
-        {
-            if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is Netcode.Transports.Facepunch.FacepunchTransport)
-            {
-                _ = SteamLobbyHandler.Instance.CreateLobbyAsync(4, "Teste");
-            }
-            else
-            {
-                Debug.Log("[DEBUG] Iniciando Host via UnityTransport (Sem Steam)");
-                SteamNetcodeBridge.Instance.StartHost(1);
-            }
-        }
-
-        public void OnClickJoin(string lobbyIdText)
-        {
-            if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is Netcode.Transports.Facepunch.FacepunchTransport)
-            {
-                if (ulong.TryParse(lobbyIdText, out ulong lobbyId))
-                    _ = SteamLobbyHandler.Instance.JoinLobbyByIdAsync(lobbyId);
-            }
-            else
-            {
-                Debug.Log("[DEBUG] Iniciando Client via UnityTransport (Conectando em 127.0.0.1)");
-                SteamNetcodeBridge.Instance.StartClient(0);
-            }
-        }
 
         public void OnClickLeave()
         {
@@ -142,7 +115,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             SteamFriends.SetRichPresence("steam_player_group", lobby.Id.ToString());
             SteamFriends.SetRichPresence("steam_player_group_size", lobby.MemberCount.ToString());
 
-            bool hostStarted = SteamNetcodeBridge.Instance != null && SteamNetcodeBridge.Instance.StartHost(1);
+            bool hostStarted = SteamNetcodeBridge.Instance != null && SteamNetcodeBridge.Instance.StartHost();
             if (!hostStarted)
             {
                 Debug.LogError("[Lobby] Lobby criado, mas o host do Netcode falhou ao iniciar.");

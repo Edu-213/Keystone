@@ -301,23 +301,7 @@ MonoBehaviour:
   _fillSpeed: 0.5
   _loadingCanvas: {fileID: 1058910714}
   _loadingCamera: {fileID: 1241711363}
-  _sceneGroups:
-  - GroupName: MainMenu
-    Scenes:
-    - reference:
-        asset: {fileID: 102900000, guid: 99c9720ab356a0642a771bea13969a05, type: 3}
-        guid: 99c9720ab356a0642a771bea13969a05
-      SceneType: 0
-  - GroupName: Game
-    Scenes:
-    - reference:
-        asset: {fileID: 102900000, guid: f3d3933900bbd7842bbbc084c2b035c0, type: 3}
-        guid: f3d3933900bbd7842bbbc084c2b035c0
-      SceneType: 0
-    - reference:
-        asset: {fileID: 102900000, guid: 2b82a15d956f7bf4a8c27ee048cec265, type: 3}
-        guid: 2b82a15d956f7bf4a8c27ee048cec265
-      SceneType: 3
+  _mainMenuGroup: {fileID: 11400000, guid: 728e70c5ab8ab984eb38aee169fbd4fc, type: 2}
 --- !u!4 &380576416
 Transform:
   m_ObjectHideFlags: 0

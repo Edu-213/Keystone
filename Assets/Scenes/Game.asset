@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 557f04f7185dee340a71296f7bb3cb83, type: 3}
+  m_Name: Game
+  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.SceneManagement.SceneGroup
+  GroupName: Game
+  Scenes:
+  - reference:
+      asset: {fileID: 102900000, guid: f3d3933900bbd7842bbbc084c2b035c0, type: 3}
+      guid: f3d3933900bbd7842bbbc084c2b035c0
+    SceneType: 0
+  - reference:
+      asset: {fileID: 102900000, guid: 2b82a15d956f7bf4a8c27ee048cec265, type: 3}
+      guid: 2b82a15d956f7bf4a8c27ee048cec265
+    SceneType: 3

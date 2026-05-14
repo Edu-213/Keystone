@@ -62,6 +62,9 @@ Assets/
   SceneGroupManager.cs
   SceneLoader.cs
   SceneManagementBootstrapper.cs
+ _Keystone/Runtime/UI/
+  MainMenu.cs
+  teste.cs
 Temp/obj/Assembly-CSharp/.NETStandard,Version=v2.1.AssemblyAttributes.cs
 
 [metadataReferences]
