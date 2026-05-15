@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Assets._Keystone.Runtime.Scripts.SceneManagement.Exceptions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -17,11 +18,14 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         public async Task LoadScenes(SceneGroup group, Func<SceneData, bool> sceneFilter = null, IProgress<float> progress = null, bool reloadDupScenes = false, bool unloadExisting = true)
         {
+            if (group == null)
+                throw new InvalidSceneGroupException("SceneGroup é nulo em LoadScenes.");
+
             ActiveSceneGroup = group;
 
             if (unloadExisting) await UnloadScenes();
 
-            var loadedScenes = GetCurrentlyLoadedSceneNames();
+            var loadedScenes = GetCurrentlyLoadedScenePaths();
             sceneFilter ??= _ => true;
 
             var scenesToLoad = group.Scenes.Where(scene => sceneFilter(scene) && (reloadDupScenes || !loadedScenes.Contains(scene.Name))).ToList();
@@ -29,8 +33,10 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
             foreach (var sceneData in scenesToLoad)
             {
-                var operation = SceneManager.LoadSceneAsync(sceneData.Path, LoadSceneMode.Additive);
-                if (operation == null) continue;
+                if (string.IsNullOrWhiteSpace(sceneData.Path))
+                    throw new InvalidSceneGroupException($"Cena '{sceneData.Name}' está com Path inválido.");
+
+                var operation = SceneManager.LoadSceneAsync(sceneData.Path, LoadSceneMode.Additive) ?? throw new InvalidOperationException($"Falha ao iniciar LoadSceneAsync para '{sceneData.Name}'.");
 
                 operationGroup.Operations.Add(operation);
                 OnSceneLoaded.Invoke(sceneData.Name);
@@ -42,70 +48,19 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
                 await Task.Yield();
             }
 
-            SetUnityActiveScene(group.FindSceneNameByType(SceneType.ActiveScene));
+            SetUnityActiveScene(group.GetActiveSceneName());
             OnSceneGroupLoaded.Invoke();
         }
-
-        /*
-                public async Task LoadScenes(SceneGroup group, IProgress<float> progress, bool reloadDupScenes = false)
-                {
-                    ActiveSceneGroup = group;
-                    var loadedScenes = new List<string>();
-                    await UnloadScenes();
-
-                    int sceneCount = SceneManager.sceneCount;
-
-                    for (var i = 0; i < sceneCount; i++)
-                    {
-                        loadedScenes.Add(SceneManager.GetSceneAt(i).name);
-                    }
-
-                    var totalScenesToLoad = ActiveSceneGroup.Scenes.Count;
-                    var operationGroup = new AsyncOperationGroup(totalScenesToLoad);
-
-                    for (var i = 0; i < totalScenesToLoad; i++)
-                    {
-                        var sceneData = group.Scenes[i];
-                        //if (reloadDupScenes == false && loadedScenes.Contains(sceneData.Name)) continue;
-                        if (sceneData.SceneType == SceneType.ActiveScene || reloadDupScenes || !loadedScenes.Contains(sceneData.Name))
-                        {
-                            var operation = SceneManager.LoadSceneAsync(sceneData.reference.Path, LoadSceneMode.Additive);
-                            operationGroup.Operations.Add(operation);
-                            OnSceneLoaded.Invoke(sceneData.Name);
-                        }
-                        //var operation = SceneManager.LoadSceneAsync(sceneData.reference.Path, LoadSceneMode.Additive);
-                        //operationGroup.Operations.Add(operation);
-                        // OnSceneLoaded.Invoke(sceneData.Name);
-                    }
-
-                    while (!operationGroup.IsDone)
-                    {
-                        progress?.Report(operationGroup.Progress);
-                        await Task.Delay(100);
-                    }
-
-                    Scene activeScene = SceneManager.GetSceneByName(ActiveSceneGroup.FindSceneNameByType(SceneType.ActiveScene));
-
-                    if (activeScene.IsValid())
-                    {
-                        SceneManager.SetActiveScene(activeScene);
-                    }
-
-                    OnSceneGroupLoaded.Invoke();
-                }
-                */
 
         public async Task UnloadScenes()
         {
             var scenes = new List<string>();
-
             int sceneCount = SceneManager.sceneCount;
 
             for (var i = sceneCount - 1; i >= 0; i--)
             {
                 var sceneAt = SceneManager.GetSceneAt(i);
                 if (!sceneAt.isLoaded) continue;
-                if (sceneAt.name == "Bootstrapper") continue;
 
                 scenes.Add(sceneAt.name);
             }
@@ -127,40 +82,44 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             }
         }
 
-        public async Task LoadAdditiveScene(string sceneName, Action onComplete = null)
+        public async Task LoadAdditiveScene(string scenePath, Action onComplete = null)
         {
-            if (SceneManager.GetSceneByName(sceneName).isLoaded)
+            if (string.IsNullOrWhiteSpace(scenePath))
+                throw new InvalidSceneGroupException("scenePath é nulo ou vazio em LoadAdditiveScene.");
+
+            if (SceneManager.GetSceneByPath(scenePath).isLoaded)
             {
                 onComplete?.Invoke();
                 return;
             }
 
-            var operation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+            var operation = SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Additive) ?? throw new InvalidOperationException($"Falha ao iniciar LoadSceneAsync para '{scenePath}'.");
             while (!operation.isDone)
             {
                 await Task.Delay(100);
             }
 
-            OnSceneLoaded.Invoke(sceneName);
+            OnSceneLoaded.Invoke(scenePath);
             onComplete?.Invoke();
         }
-        //await Bootstrapper.Instance.SceneLoader.manager.LoadAdditiveScene("teste"); para carregar uma cena de forma aditiva
 
-        //UnLoad Additive Scene type exemplo Character Customization
-        public async Task UnloadScene(string sceneName)
+        public async Task UnloadScene(string scenePath)
         {
-            if (!SceneManager.GetSceneByName(sceneName).isLoaded) return;
+            if (string.IsNullOrWhiteSpace(scenePath))
+                throw new InvalidSceneGroupException("scenePath é nulo ou vazio em UnloadScene.");
 
-            var operation = SceneManager.UnloadSceneAsync(sceneName);
+            if (!SceneManager.GetSceneByPath(scenePath).isLoaded) return;
+
+            var operation = SceneManager.UnloadSceneAsync(scenePath) ?? throw new InvalidOperationException($"Falha ao iniciar UnloadSceneAsync para '{scenePath}'.");
             while (!operation.isDone)
             {
                 await Task.Delay(100);
             }
 
-            OnSceneUnloaded.Invoke(sceneName);
+            OnSceneUnloaded.Invoke(scenePath);
         }
 
-        private HashSet<string> GetCurrentlyLoadedSceneNames()
+        private HashSet<string> GetCurrentlyLoadedScenePaths()
         {
             var loadedScenes = new HashSet<string>();
 
@@ -169,7 +128,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             {
                 var scene = SceneManager.GetSceneAt(i);
                 if (scene.isLoaded)
-                    loadedScenes.Add(scene.name);
+                    loadedScenes.Add(scene.path);
             }
 
             return loadedScenes;
@@ -202,7 +161,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
                 }
 
                 return total / Operations.Count;
-            }   
+            }
         }
         public bool IsDone => Operations.Count == 0 || Operations.All(o => o.isDone);
 

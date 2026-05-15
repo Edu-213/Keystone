@@ -58,6 +58,10 @@ Assets/
   SteamLobbyHandler.cs
   SteamNetcodeBridge.cs
  _Keystone/Runtime/Scripts/SceneManagement/
+  Exceptions/SceneManagementExceptions.cs
+  Extensions/
+   TaskExtensions.cs
+   UnityTaskRunner.cs
   SceneGroup.cs
   SceneGroupManager.cs
   SceneLoader.cs

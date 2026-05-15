@@ -176,6 +176,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 150144553}
     - target: {fileID: 8932890900497119705, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
+      propertyPath: _networkManager
+      value: 
+      objectReference: {fileID: 150144553}
+    - target: {fileID: 8932890900497119705, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
       propertyPath: facepunchTransport
       value: 
       objectReference: {fileID: 0}
@@ -317,6 +321,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 722208652}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &673394748 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8932890900497119705, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
+  m_PrefabInstance: {fileID: 145661680}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e1f5648276317146a7ee7938e1188e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Scripts.Networking.SteamNetcodeBridge
 --- !u!1 &722208650
 GameObject:
   m_ObjectHideFlags: 0
@@ -347,6 +362,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.SceneManagement.SceneManagementBootstrapper
   _sceneLoader: {fileID: 380576415}
+  _steamBridge: {fileID: 673394748}
+  _sceneSyncController: {fileID: 1144076095}
 --- !u!4 &722208652
 Transform:
   m_ObjectHideFlags: 0
@@ -517,11 +534,11 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
+  m_VertexColorAlwaysGammaSpace: 1
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 32767
   m_TargetDisplay: 0
 --- !u!224 &1058910715
 RectTransform:
@@ -600,7 +617,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Assets.Scripts.Core.Network.SceneSyncController
   ShowTopMostFoldoutHeaderGroup: 1
-  sceneBootstrapper: {fileID: 0}
 --- !u!4 &1144076096
 Transform:
   m_ObjectHideFlags: 0

@@ -1,31 +1,45 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Assets._Keystone.Runtime.Scripts.Networking;
 using Assets._Keystone.Runtime.Scripts.SceneManagement;
+using Assets._Keystone.Runtime.Scripts.SceneManagement.Extensions;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Assets.Scripts.Core.Network
+namespace Assets._Keystone.Runtime.Scripts.Networking
 {
     public class SceneSyncController : NetworkBehaviour
     {
-        [SerializeField] private SceneManagementBootstrapper sceneBootstrapper;
         private SceneGroup currentSceneGroup = null;
         private bool playersSpawnedForCurrentLoad;
         private bool _isLoadingGroup = false;
 
+        private SceneManagementBootstrapper _bootstrapper;
+        private NetworkManager _networkManager;
+
+        private SceneLoader SceneLoader => _bootstrapper?.SceneLoader ?? throw new InvalidOperationException("SceneManagementBootstrapper ou SceneLoader não inicializado.");
+
+        void Awake()
+        {
+            _networkManager = NetworkManager.Singleton;
+        }
+
+        public void Initialize(SceneManagementBootstrapper bootstrapper)
+        {
+            _bootstrapper = bootstrapper;
+        }
+
         private void Start()
         {
-            if (sceneBootstrapper == null)
+            if (_networkManager == null)
             {
-                sceneBootstrapper = FindFirstObjectByType<SceneManagementBootstrapper>();
+                _networkManager = NetworkManager.Singleton;
             }
 
-            var nm = NetworkManager.Singleton;
-            if (nm != null && nm.SceneManager != null)
+            if (_networkManager?.SceneManager != null)
             {
-                nm.SceneManager.OnLoadEventCompleted += OnLoadEventCompleted;
+                _networkManager.SceneManager.OnLoadEventCompleted += OnLoadEventCompleted;
             }
         }
 
@@ -33,15 +47,15 @@ namespace Assets.Scripts.Core.Network
         {
             base.OnDestroy();
 
-            if (NetworkManager.Singleton != null)
+            if (_networkManager.SceneManager != null)
             {
-                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnLoadEventCompleted;
+                _networkManager.SceneManager.OnLoadEventCompleted -= OnLoadEventCompleted;
             }
         }
 
-        public void HostLoadSceneGroupWrapper(SceneGroup group)
+        public void RequestHostLoadSceneGroup(SceneGroup group)
         {
-            _ = HostLoadSceneGroup(group);
+            UnityTaskRunner.RunSafe(HostLoadSceneGroup(group));
         }
 
         private async Task HostLoadSceneGroup(SceneGroup group)
@@ -59,7 +73,7 @@ namespace Assets.Scripts.Core.Network
                 currentSceneGroup = group;
                 playersSpawnedForCurrentLoad = false;
 
-                await sceneBootstrapper.SceneLoader.LoadSceneGroup(group, useNetworkScene: true);
+                await SceneLoader.LoadSceneGroup(group, useNetworkScene: true);
             }
             finally
             {
@@ -67,17 +81,13 @@ namespace Assets.Scripts.Core.Network
             }
         }
 
-        private void OnLoadEventCompleted(
-            string sceneName,
-            LoadSceneMode loadSceneMode,
-            System.Collections.Generic.List<ulong> clientsCompleted,
-            System.Collections.Generic.List<ulong> clientsTimedOut)
+        private void OnLoadEventCompleted(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
         {
             if (!IsServer) return;
             if (playersSpawnedForCurrentLoad) return;
             if (currentSceneGroup == null) return;
 
-            string activeSceneName = currentSceneGroup.FindSceneNameByType(SceneType.ActiveScene);
+            string activeSceneName = currentSceneGroup.GetActiveSceneName();
             if (sceneName != activeSceneName) return;
 
             playersSpawnedForCurrentLoad = true;
@@ -95,25 +105,31 @@ namespace Assets.Scripts.Core.Network
 
         public async Task LoadMainMenuAfterShutdown(int timeoutMs = 10000)
         {
+            try
+            {
+                await WaitForNetworkShutdown(timeoutMs);
+            }
+            catch (TimeoutException ex)
+            {
+                Debug.LogWarning(ex.Message);
+            }
+
+            await SceneLoader.LoadSceneGroup(SceneLoader.MainMenuGroup, useNetworkScene: false);
+            //GameUtils.ShowCursor(true);
+        }
+
+        private static async Task WaitForNetworkShutdown(int timeoutMs, int delayStep = 100)
+        {
             int waited = 0;
-            int delayStep = 100;
 
             while (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
                 await Task.Delay(delayStep);
-
                 waited += delayStep;
 
                 if (waited >= timeoutMs)
-                {
-                    Debug.LogWarning("Timeout esperando NetworkManager parar antes de carregar MainMenu.");
-                    break;
-                }
+                    throw new TimeoutException("Timeout esperando NetworkManager parar antes de carregar MainMenu.");
             }
-
-            var mainGroup = sceneBootstrapper.SceneLoader.MainMenuGroup;
-            await sceneBootstrapper.SceneLoader.LoadSceneGroup(mainGroup, useNetworkScene: false);
-            //GameUtils.ShowCursor(true);
         }
 
         [ClientRpc]
@@ -125,7 +141,7 @@ namespace Assets.Scripts.Core.Network
             }
             else
             {
-                _ = FireAndForgetLoadMainMenu();
+                UnityTaskRunner.RunSafe(FireAndForgetLoadMainMenu());
             }
         }
 

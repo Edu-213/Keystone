@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Assets._Keystone.Runtime.Scripts.SceneManagement.Exceptions;
+using Assets._Keystone.Runtime.Scripts.SceneManagement.Extensions;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,7 +13,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
     public class SceneLoader : MonoBehaviour
     {
         [SerializeField] private Image _loadingBar;
-        [SerializeField] private float _fillSpeed = 0.5f;
+        [SerializeField] private float _fillSpeed = 2f;
         [SerializeField] private Canvas _loadingCanvas;
         [SerializeField] private Camera _loadingCamera;
 
@@ -23,18 +25,30 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
         private bool isLoading;
         private bool _isLoadingGroup = false;
 
-        public readonly SceneGroupManager manager = new SceneGroupManager();
-
         private SceneGroup _pendingNetworkGroup;
         private TaskCompletionSource<bool> _networkSceneLoadedTcs;
         private bool _networkCallbacksRegistered;
 
+        private SceneGroupManager _manager;
+        private NetworkManager _networkManager;
+
         public SceneGroup MainMenuGroup => _mainMenuGroup;
 
-        private async void Start()
+        private void Awake()
         {
-            NetworkManager.Singleton.OnClientConnectedCallback += OnLocalClientConnected;
-            await LoadSceneGroup(_mainMenuGroup, useNetworkScene: false);
+            _manager ??= new SceneGroupManager();
+            _networkManager = NetworkManager.Singleton;
+        }
+
+        private void Start()
+        {
+            if (_networkManager == null)
+            {
+                _networkManager = NetworkManager.Singleton;
+            }
+
+            _networkManager.OnClientConnectedCallback += OnLocalClientConnected;
+            UnityTaskRunner.RunSafe(StartMainMenuLoad());
         }
 
         private void Update()
@@ -47,17 +61,29 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
         private void OnDestroy()
         {
             UnregisterNetworkCallbacks();
-            if (NetworkManager.Singleton != null)
+            if (_networkManager != null)
             {
-                NetworkManager.Singleton.OnClientConnectedCallback -= OnLocalClientConnected;
+                _networkManager.OnClientConnectedCallback -= OnLocalClientConnected;
             }
         }
 
         private void OnLocalClientConnected(ulong id)
         {
-            if (id != NetworkManager.Singleton.LocalClientId) return;
+            if (id != _networkManager.LocalClientId) return;
 
             RegisterNetworkCallbacks();
+        }
+
+        private async Task StartMainMenuLoad()
+        {
+            try
+            {
+                await LoadSceneGroup(_mainMenuGroup, useNetworkScene: false);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
         }
 
         public async Task LoadSceneGroup(SceneGroup group, bool useNetworkScene)
@@ -69,24 +95,21 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             }
 
             Time.timeScale = 1f;
-
-            if (group == null)
-            {
-                Debug.LogError("Invalid scene group index");
-                return;
-            }
-
             _isLoadingGroup = true;
+
             bool isMainMenu = group == _mainMenuGroup;
             bool showLoading = !isMainMenu || !_isFirstLoad;
 
             if (showLoading)
             {
                 ShowLoading();
+                await Task.Yield();
             }
 
             try
             {
+                _ = GetValidatedActiveSceneName(group);
+
                 if (useNetworkScene)
                 {
                     await LoadSceneGroupMultiplayer(group);
@@ -103,10 +126,15 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             }
             finally
             {
-                if (showLoading)
+                if (showLoading && _loadingBar != null)
                 {
-                    HideLoading();
+                    while (_loadingBar.fillAmount < 0.98f)
+                    {
+                        await Task.Yield();
+                    }
                 }
+
+                if (showLoading) HideLoading();
 
                 _isFirstLoad = false;
                 _isLoadingGroup = false;
@@ -115,45 +143,31 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
         private async Task LoadSceneGroupSingleplayer(SceneGroup group)
         {
-            var progress = new LoadingProgress();
-            progress.Progressed += value =>
-            {
-                _targetProgress = Mathf.Max(_targetProgress, value);
-            };
-
-            string activeSceneName = group.FindSceneNameByType(SceneType.ActiveScene);
-
-            if (string.IsNullOrEmpty(activeSceneName))
-            {
-                Debug.LogError("SceneGroup sem ActiveScene definida.");
-                return;
-            }
-
+            string activeSceneName = GetValidatedActiveSceneName(group);
             _targetProgress = 0.05f;
 
-            var singleLoad = SceneManager.LoadSceneAsync(activeSceneName, LoadSceneMode.Single);
-            if (singleLoad == null)
-            {
-                Debug.LogError($"Falha ao iniciar carregamento da cena ativa: {activeSceneName}");
-                return;
-            }
+            var singleLoad = SceneManager.LoadSceneAsync(activeSceneName, LoadSceneMode.Single) ?? throw new InvalidOperationException($"Falha ao iniciar carregamento da cena ativa: {activeSceneName}");
 
-            while (!singleLoad.isDone)
+            singleLoad.allowSceneActivation = false;
+
+            while (singleLoad.progress < 0.9f)
             {
-                _targetProgress = Mathf.Clamp(singleLoad.progress, 0f, 0.8f);
+                float realProgress = Mathf.Clamp01(singleLoad.progress / 0.9f);
+                _targetProgress = Mathf.Lerp(0.05f, 0.50f, realProgress);
                 await Task.Yield();
             }
 
-            _targetProgress = 0.85f;
+            singleLoad.allowSceneActivation = true;
 
-            await manager.LoadScenes(
-                group,
-                s => s.SceneType != SceneType.ActiveScene,
-                progress,
-                reloadDupScenes: false,
-                unloadExisting: false
-            );
+            while (!singleLoad.isDone)
+            {
+                await Task.Yield();
+            }
 
+            var progress = new LoadingProgress();
+            progress.Progressed += value => _targetProgress = Mathf.Lerp(0.50f, 0.95f, value);
+
+            await _manager.LoadScenes(group, s => s.SceneType != SceneType.ActiveScene, progress, reloadDupScenes: false, unloadExisting: false);
             _targetProgress = 1f;
         }
 
@@ -161,143 +175,139 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
         {
             RegisterNetworkCallbacks();
 
-            if (NetworkManager.Singleton == null)
-            {
-                return;
-            }
+            if (!_networkManager.IsListening)
+                throw new NetworkSceneLoadException("NetworkManager não está em estado de escuta.");
 
-            if (!NetworkManager.Singleton.IsListening)
-            {
-                return;
-            }
+            if (_networkManager.SceneManager == null)
+                throw new NetworkSceneLoadException("NetworkSceneManager é nulo.");
 
             _pendingNetworkGroup = group;
             _networkSceneLoadedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            string networkSceneName = group.FindSceneNameByType(SceneType.ActiveScene);
+            string networkSceneName = GetValidatedActiveSceneName(group);
 
-            if (string.IsNullOrEmpty(networkSceneName))
-            {
-                _pendingNetworkGroup = null;
-                _networkSceneLoadedTcs = null;
-                return;
-            }
+            if (_networkManager.IsServer)
+                _networkManager.SceneManager.LoadScene(networkSceneName, LoadSceneMode.Single);
 
-            if (NetworkManager.Singleton.IsServer)
-            {
-                NetworkManager.Singleton.SceneManager.LoadScene(networkSceneName, LoadSceneMode.Single);
-            }
-
-            await _networkSceneLoadedTcs.Task;
-        }
-
-        public void ResetNetworkLoadingState()
-        {
-            _pendingNetworkGroup = null;
-            _networkSceneLoadedTcs?.TrySetCanceled();
-            _networkSceneLoadedTcs = null;
-            _targetProgress = 0f;
-            isLoading = false;
-            HideLoading();
-            UnregisterNetworkCallbacks();
-            _networkCallbacksRegistered = false;
-        }
-
-        private async void HandleNetworkSceneEvent(SceneEvent sceneEvent)
-        {
-            if (sceneEvent.SceneEventType == SceneEventType.Load)
-            {
-                if (sceneEvent.ClientId != NetworkManager.Singleton.LocalClientId)
-                    return;
-
-                if (!isLoading)
-                    ShowLoading();
-
-                _targetProgress = Mathf.Max(_targetProgress, 0.15f);
-
-                while (sceneEvent.AsyncOperation != null && !sceneEvent.AsyncOperation.isDone)
-                {
-                    _targetProgress = Mathf.Clamp01(Mathf.Max(_targetProgress, sceneEvent.AsyncOperation.progress));
-                    await Task.Yield();
-                }
-
-                return;
-            }
-
-            if (sceneEvent.SceneEventType == SceneEventType.LoadComplete)
-            {
-                if (sceneEvent.ClientId != NetworkManager.Singleton.LocalClientId)
-                    return;
-
-                _targetProgress = 0.8f;
-                return;
-            }
-
-            if (sceneEvent.SceneEventType == SceneEventType.SynchronizeComplete)
-            {
-                if (sceneEvent.ClientId != NetworkManager.Singleton.LocalClientId)
-                    return;
-
-                if (_networkSceneLoadedTcs == null)
-                {
-                    _targetProgress = 1f;
-                    HideLoading();
-                    return;
-                }
-            }
-        }
-
-        private async void HandleNetworkLoadEventCompleted(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
-        {
+            int timeoutMs = Mathf.Max(1, _networkManager.NetworkConfig.LoadSceneTimeOut) * 1000;
             try
             {
-                if (_pendingNetworkGroup == null) return;
+                await _networkSceneLoadedTcs.Task.TimeoutAfter(timeoutMs, $"Timeout ao carregar a cena de rede '{networkSceneName}'.");
+            }
+            catch
+            {
+                ClearPendingNetworkLoad();
+                throw;
+            }
+        }
 
-                string expectedScene = _pendingNetworkGroup.FindSceneNameByType(SceneType.ActiveScene);
-                if (sceneName != expectedScene) return;
+        private void HandleNetworkSceneEventSafe(SceneEvent sceneEvent)
+        {
+            UnityTaskRunner.RunSafe(HandleNetworkSceneEvent(sceneEvent));
+        }
 
-                var progress = new LoadingProgress();
-                progress.Progressed += value => _targetProgress = Mathf.Lerp(0.8f, 1f, value);
+        private async Task HandleNetworkSceneEvent(SceneEvent sceneEvent)
+        {
+            if (sceneEvent.ClientId != _networkManager.LocalClientId)
+                return;
 
-                await manager.LoadScenes(_pendingNetworkGroup, s => s.SceneType != SceneType.ActiveScene, progress, reloadDupScenes: false, unloadExisting: false);
+            switch (sceneEvent.SceneEventType)
+            {
+                case SceneEventType.Load:
+                    if (!isLoading) ShowLoading();
+                    _targetProgress = Mathf.Max(_targetProgress, 0.05f);
+
+                    while (sceneEvent.AsyncOperation != null && !sceneEvent.AsyncOperation.isDone)
+                    {
+                        float rawProgress = Mathf.Clamp01(sceneEvent.AsyncOperation.progress / 0.9f);
+                        _targetProgress = Mathf.Lerp(0.05f, 0.50f, rawProgress);
+                        await Task.Yield();
+                    }
+                    break;
+                case SceneEventType.LoadComplete:
+                    _targetProgress = 0.50f;
+                    break;
+                case SceneEventType.SynchronizeComplete:
+                    _targetProgress = 1f;
+
+                    while (_loadingBar.fillAmount < 0.98f)
+                    {
+                        await Task.Yield();
+                    }
+
+                    HideLoading();
+                    ClearPendingNetworkLoad();
+                    break;
+            }
+        }
+
+        private void HandleNetworkLoadEventCompletedSafe(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+        {
+            UnityTaskRunner.RunSafe(HandleNetworkLoadEventCompleted(sceneName, loadSceneMode, clientsCompleted, clientsTimedOut));
+        }
+
+        private async Task HandleNetworkLoadEventCompleted(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+        {
+            if (_pendingNetworkGroup == null) return;
+
+            string expectedScene = _pendingNetworkGroup.FindSceneNameByType(SceneType.ActiveScene);
+            if (sceneName != expectedScene) return;
+
+            var progress = new LoadingProgress();
+            progress.Progressed += value => _targetProgress = Mathf.Lerp(0.50f, 0.95f, value);
+
+            try
+            {
+                await _manager.LoadScenes(_pendingNetworkGroup, s => s.SceneType != SceneType.ActiveScene, progress, reloadDupScenes: false, unloadExisting: false);
 
                 _targetProgress = 1f;
                 _networkSceneLoadedTcs?.TrySetResult(true);
-
-                _pendingNetworkGroup = null;
-                _networkSceneLoadedTcs = null;
             }
             catch (Exception ex)
             {
                 _networkSceneLoadedTcs?.TrySetException(ex);
-                _pendingNetworkGroup = null;
-                _networkSceneLoadedTcs = null;
                 Debug.LogException(ex);
             }
+            finally
+            {
+                ClearPendingNetworkLoad();
+            }
+        }
+
+        private static string GetValidatedActiveSceneName(SceneGroup group)
+        {
+            if (group == null)
+                throw new InvalidSceneGroupException("SceneGroup é nulo.");
+
+            string activeSceneName = group.GetActiveSceneName();
+
+            if (string.IsNullOrWhiteSpace(activeSceneName))
+                throw new InvalidSceneGroupException($"SceneGroup '{group.GroupName}' sem ActiveScene definida.");
+
+            return activeSceneName;
         }
 
         public void RegisterNetworkCallbacks()
         {
             if (_networkCallbacksRegistered) return;
-            if (NetworkManager.Singleton == null) return;
 
-            var sceneManager = NetworkManager.Singleton.SceneManager;
+            var sceneManager = _networkManager.SceneManager;
             if (sceneManager == null) return;
 
-            sceneManager.OnSceneEvent += HandleNetworkSceneEvent;
-            sceneManager.OnLoadEventCompleted += HandleNetworkLoadEventCompleted;
+            sceneManager.OnSceneEvent += HandleNetworkSceneEventSafe;
+            sceneManager.OnLoadEventCompleted += HandleNetworkLoadEventCompletedSafe;
             _networkCallbacksRegistered = true;
         }
 
         private void UnregisterNetworkCallbacks()
         {
             if (!_networkCallbacksRegistered) return;
-            if (NetworkManager.Singleton == null) return;
 
-            var sceneManager = NetworkManager.Singleton.SceneManager;
+            var sceneManager = _networkManager.SceneManager;
+            if (sceneManager == null) return;
 
-            sceneManager.OnSceneEvent -= HandleNetworkSceneEvent;
-            sceneManager.OnLoadEventCompleted -= HandleNetworkLoadEventCompleted;
+            sceneManager.OnSceneEvent -= HandleNetworkSceneEventSafe;
+            sceneManager.OnLoadEventCompleted -= HandleNetworkLoadEventCompletedSafe;
             _networkCallbacksRegistered = false;
         }
 
@@ -319,6 +329,22 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
             isLoading = enable;
             _loadingCanvas.gameObject.SetActive(enable);
             _loadingCamera.gameObject.SetActive(enable);
+        }
+
+        public void ResetNetworkLoadingState()
+        {
+            _networkSceneLoadedTcs?.TrySetCanceled();
+            ClearPendingNetworkLoad();
+            _targetProgress = 0f;
+            isLoading = false;
+            UnregisterNetworkCallbacks();
+            _networkCallbacksRegistered = false;
+        }
+
+        private void ClearPendingNetworkLoad()
+        {
+            _pendingNetworkGroup = null;
+            _networkSceneLoadedTcs = null;
         }
     }
 

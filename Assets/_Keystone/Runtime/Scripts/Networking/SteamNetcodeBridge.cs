@@ -2,20 +2,44 @@ using Netcode.Transports.Facepunch;
 using Unity.Netcode;
 using Steamworks;
 using UnityEngine;
-using Assets.Scripts.Core.Network;
 using Assets._Keystone.Runtime.Scripts.SceneManagement;
+using Assets._Keystone.Runtime.Scripts.SceneManagement.Extensions;
+using System.Threading.Tasks;
 
 namespace Assets._Keystone.Runtime.Scripts.Networking
 {
     public class SteamNetcodeBridge : MonoBehaviour
     {
+        public enum NetworkSessionState
+        {
+            Idle,
+            StartingHost,
+            StartingClient,
+            Connecting,
+            InSession,
+            LeavingSession,
+            ReturningToMenu
+        }
+
         public static SteamNetcodeBridge Instance { get; private set; }
 
-        [SerializeField] private NetworkManager networkManager;
+        [SerializeField] private NetworkManager _networkManager;
         [SerializeField] private FacepunchTransport facepunchTransport;
-        [SerializeField] private SceneSyncController sceneSyncController;
+
+        private SceneManagementBootstrapper _bootstrapper;
+        private SceneManagementBootstrapper Bootstrapper => _bootstrapper ?? throw new System.InvalidOperationException("SceneManagementBootstrapper não inicializado.");
+
+        private SceneLoader SceneLoader => Bootstrapper.SceneLoader;
+        private SceneSyncController SceneSyncController => Bootstrapper.SceneSyncController;
 
         private SceneGroup pendingHostSceneGroup = null;
+        private NetworkSessionState _state = NetworkSessionState.Idle;
+        public NetworkSessionState State => _state;
+
+        public void Initialize(SceneManagementBootstrapper bootstrapper)
+        {
+            _bootstrapper = bootstrapper;
+        }
 
         private void Awake()
         {
@@ -28,33 +52,32 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            if (networkManager == null)
-                networkManager = NetworkManager.Singleton;
+            if (_networkManager == null)
+                _networkManager = NetworkManager.Singleton;
 
-            if (facepunchTransport == null && networkManager != null)
-                facepunchTransport = networkManager.GetComponent<FacepunchTransport>();
-
-            if (sceneSyncController == null)
-                sceneSyncController = FindFirstObjectByType<SceneSyncController>();
+            if (facepunchTransport == null && _networkManager != null)
+                facepunchTransport = _networkManager.GetComponent<FacepunchTransport>();
         }
 
         private void Start()
         {
-            if (networkManager != null)
+            if (_networkManager != null)
             {
-                networkManager.OnServerStarted += HandleServerStarted;
-                networkManager.OnServerStopped += HandleServerStopped;
-                networkManager.OnClientDisconnectCallback += HandleClientDisconnect;
+                _networkManager.OnServerStarted += HandleServerStarted;
+                _networkManager.OnServerStopped += HandleServerStopped;
+                _networkManager.OnClientConnectedCallback += HandleClientConnected;
+                _networkManager.OnClientDisconnectCallback += HandleClientDisconnect;
             }
         }
 
         private void OnDestroy()
         {
-            if (networkManager != null)
+            if (_networkManager != null)
             {
-                networkManager.OnServerStarted -= HandleServerStarted;
-                networkManager.OnServerStopped -= HandleServerStopped;
-                networkManager.OnClientDisconnectCallback -= HandleClientDisconnect;
+                _networkManager.OnServerStarted -= HandleServerStarted;
+                _networkManager.OnServerStopped -= HandleServerStopped;
+                _networkManager.OnClientConnectedCallback -= HandleClientConnected;
+                _networkManager.OnClientDisconnectCallback -= HandleClientDisconnect;
             }
         }
 
@@ -63,44 +86,65 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             if (!CanUseNetworkManager())
                 return false;
 
-            _isLeavingManually = false;
-            _isReturningToMenu = false;
+            if (_state != NetworkSessionState.Idle)
+            {
+                Debug.LogWarning($"[Netcode] Não é possível iniciar host no estado atual: {_state}");
+                return false;
+            }
 
-            if (networkManager.IsListening)
+            if (_networkManager.IsListening)
             {
                 Debug.LogWarning("[Netcode] Já existe uma sessão ativa.");
                 return false;
             }
+
+            _state = NetworkSessionState.StartingHost;
             pendingHostSceneGroup = sceneGroupAfterStart;
 
-            bool success = networkManager.StartHost();
-            Debug.Log(success
-                ? "[Netcode] Host iniciado com sucesso."
-                : "[Netcode] Falha ao iniciar host.");
+            bool success = _networkManager.StartHost();
+            Debug.Log(success ? "[Netcode] Host iniciado com sucesso." : "[Netcode] Falha ao iniciar host.");
+
+            if (!success)
+            {
+                pendingHostSceneGroup = null;
+                _state = NetworkSessionState.Idle;
+            }
 
             return success;
         }
 
         private void HandleServerStarted()
         {
+            if (_state == NetworkSessionState.StartingHost)
+            {
+                _state = NetworkSessionState.InSession;
+            }
+
             if (pendingHostSceneGroup == null)
                 return;
 
-            if (sceneSyncController == null)
+            if (_bootstrapper.SceneSyncController == null)
             {
                 Debug.LogError("[Netcode] SceneSyncController não encontrado.");
+                pendingHostSceneGroup = null;
                 return;
             }
 
             SceneGroup groupToLoad = pendingHostSceneGroup;
             pendingHostSceneGroup = null;
 
-            sceneSyncController.HostLoadSceneGroupWrapper(groupToLoad);
+            SceneSyncController.RequestHostLoadSceneGroup(groupToLoad);
         }
 
         private void HandleServerStopped(bool isServer)
         {
             Debug.Log("[Netcode] Servidor parado localmente.");
+
+            if (_state != NetworkSessionState.ReturningToMenu)
+            {
+                _state = NetworkSessionState.ReturningToMenu;
+            }
+
             ReturnToMenuOnce();
         }
 
@@ -109,111 +153,133 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             if (!CanUseNetworkManager())
                 return false;
 
-            _isLeavingManually = false;
-            _isReturningToMenu = false;
+            if (_state != NetworkSessionState.Idle)
+            {
+                Debug.LogWarning($"[Netcode] Não é possível iniciar client no estado atual: {_state}");
+                return false;
+            }
 
-            if (networkManager.IsListening)
+            if (_networkManager.IsListening)
             {
                 Debug.LogWarning("[Netcode] Já existe uma sessão ativa.");
                 return false;
             }
 
-            if (networkManager.NetworkConfig.NetworkTransport is Netcode.Transports.Facepunch.FacepunchTransport)
+            _state = NetworkSessionState.StartingClient;
+
+            if (_networkManager.NetworkConfig.NetworkTransport is FacepunchTransport)
             {
                 if (facepunchTransport == null)
                 {
                     Debug.LogError("[Netcode] FacepunchTransport não encontrado.");
+                    _state = NetworkSessionState.Idle;
                     return false;
                 }
                 facepunchTransport.targetSteamId = hostSteamId;
             }
             else
             {
-                Debug.Log("[Netcode] Usando transporte padrão (Provavelmente UnityTransport).");
+                Debug.Log("[Netcode] Usando transporte padrão.");
             }
 
-            bool success = networkManager.StartClient();
-            Debug.Log(success
-                ? $"[Netcode] Client iniciado para host {hostSteamId}."
-                : "[Netcode] Falha ao iniciar client.");
+            bool success = _networkManager.StartClient();
+            Debug.Log(success ? $"[Netcode] Client iniciado para host {hostSteamId}." : "[Netcode] Falha ao iniciar client.");
 
-            if (success)
-            {
-                if (sceneSyncController == null)
-                    sceneSyncController = FindFirstObjectByType<SceneSyncController>();
+            if (!success) return false;
 
-                var sceneLoader = FindFirstObjectByType<SceneLoader>();
-                sceneLoader?.RegisterNetworkCallbacks();
-            }
+
+            _state = NetworkSessionState.Connecting;
+            SceneLoader?.RegisterNetworkCallbacks();
 
             return success;
         }
 
-        private bool _isLeavingManually;
-        private bool _isReturningToMenu;
+        private void HandleClientConnected(ulong clientId)
+        {
+            if (clientId == _networkManager.LocalClientId)
+            {
+                if (_state == NetworkSessionState.Connecting)
+                {
+                    _state = NetworkSessionState.InSession;
+                }
+                else
+                {
+                    Debug.LogWarning($"[Netcode] OnClientConnectedCallback chamado mas estado já não é Connecting: {_state}");
+                }
+            }
+        }
+
         private void HandleClientDisconnect(ulong clientId)
         {
-            if (clientId != NetworkManager.Singleton.LocalClientId)
+            if (_networkManager == null || clientId != _networkManager.LocalClientId)
                 return;
 
-            if (_isLeavingManually)
+            if (_state == NetworkSessionState.LeavingSession)
             {
                 Debug.Log("[Netcode] Cliente saiu manualmente.");
-                _isLeavingManually = false;
             }
             else
             {
                 Debug.LogWarning("[Netcode] Sessão encerrada.");
             }
 
-            CleanupSceneLoadingState();
+            SceneLoader.ResetNetworkLoadingState();
+            _state = NetworkSessionState.ReturningToMenu;
             ReturnToMenuOnce();
         }
 
         public void LeaveSession()
         {
-            if (networkManager == null || !networkManager.IsListening || _isLeavingManually)
+            if (_networkManager == null || !_networkManager.IsListening)
                 return;
 
-            _isLeavingManually = true;
-            networkManager.Shutdown();
+            if (_state != NetworkSessionState.InSession)
+            {
+                Debug.LogWarning($"[Netcode] Não é possível sair da sessão no estado atual: {_state}");
+                return;
+            }
+
+            _state = NetworkSessionState.LeavingSession;
+            _networkManager.Shutdown();
 
             Debug.Log("[Netcode] Saindo da sessão e voltando ao menu...");
-            CleanupSceneLoadingState();
-        }
-
-        private void CleanupSceneLoadingState()
-        {
-            var sceneLoader = FindFirstObjectByType<SceneLoader>();
-            sceneLoader?.ResetNetworkLoadingState();
+            SceneLoader?.ResetNetworkLoadingState();
         }
 
         private void ReturnToMenuOnce()
         {
-            if (_isReturningToMenu)
+            if (_state != NetworkSessionState.ReturningToMenu)
                 return;
 
-            _isReturningToMenu = true;
+            if (SceneSyncController != null)
+                UnityTaskRunner.RunSafe(ReturnToMenuFlow());
+        }
 
-            if (sceneSyncController == null)
-                sceneSyncController = FindFirstObjectByType<SceneSyncController>();
-
-            if (sceneSyncController != null)
-                _ = sceneSyncController.LoadMainMenuAfterShutdown();
+        private async Task ReturnToMenuFlow()
+        {
+            try
+            {
+                await SceneSyncController.LoadMainMenuAfterShutdown();
+            }
+            finally
+            {
+                _state = NetworkSessionState.Idle;
+            }
         }
 
         public void Shutdown()
         {
-            if (networkManager != null && networkManager.IsListening)
+            if (_networkManager != null && _networkManager.IsListening)
             {
-                networkManager.Shutdown();
+                _state = NetworkSessionState.LeavingSession;
+                _networkManager.Shutdown();
                 Debug.Log("[Netcode] Sessão encerrada.");
             }
         }
 
         private bool CanUseNetworkManager()
         {
-            if (networkManager == null)
+            if (_networkManager == null)
             {
                 Debug.LogError("[Netcode] NetworkManager não atribuído.");
                 return false;

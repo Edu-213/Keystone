@@ -5,9 +5,9 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 {
     public class GameNetworkManager : MonoBehaviour
     {
-        public uint appId = 480;
-
         public static GameNetworkManager Instance { get; private set; }
+        
+        public uint appId = 480;
         public bool IsSteamInitialized { get; private set; }
 
         private void Awake()
