@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Assets._Keystone.Runtime.Scripts.Events;
 using Assets._Keystone.Runtime.Scripts.SceneManagement.Exceptions;
 using Assets._Keystone.Runtime.Scripts.SceneManagement.Extensions;
 using Unity.Netcode;
@@ -236,6 +237,9 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
                     }
 
                     HideLoading();
+                    Debug.Log($"[SceneLoader] Client synchronized: {sceneEvent.ClientId}");
+                    NetworkEvents.RaiseClientGameplayReady(sceneEvent.ClientId);
+
                     ClearPendingNetworkLoad();
                     break;
             }
@@ -262,6 +266,12 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
                 _targetProgress = 1f;
                 _networkSceneLoadedTcs?.TrySetResult(true);
+
+                if (_networkManager.IsServer)
+                {
+                    Debug.Log("[SceneLoader] Host gameplay scene ready.");
+                    NetworkEvents.RaiseHostGameplayReady();
+                }
             }
             catch (Exception ex)
             {

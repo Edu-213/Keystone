@@ -55,7 +55,8 @@ GameObject:
   m_Component:
   - component: {fileID: 3954833124334470962}
   - component: {fileID: 5603378969454478527}
-  - component: {fileID: 1639153439624638195}
+  - component: {fileID: 7277487363904551749}
+  - component: {fileID: 4253415921288261945}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -91,7 +92,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2804125700
+  GlobalObjectIdHash: 2231987059
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -104,7 +105,7 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &1639153439624638195
+--- !u!114 &7277487363904551749
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -113,7 +114,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 7939709329492067046}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 837ce8d4fc539f2488dcf636b76e40f0, type: 3}
+  m_Script: {fileID: 11500000, guid: 3025edf10dcc4f04fab67548d55fed36, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerNetworkSaveHub
+  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer.NetworkPlayerSaveAgent
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &4253415921288261945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7939709329492067046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 598f59946a35949479782c371efcb2f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork.NetcodePlayerIdentityProvider
+  idPrefix: Player

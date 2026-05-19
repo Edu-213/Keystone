@@ -27,6 +27,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
 
         private readonly Dictionary<ulong, string> clientIdToGuid = new();
         private readonly Dictionary<string, PlayerBlockCollection> temporaryPlayerBlocks = new();
+        private static readonly IReadOnlyDictionary<string, string> EmptyBlocks = new Dictionary<string, string>();
 
         public SaveFile CurrentSave => currentSave;
         public string SelectedProfileId => selectedProfileId;
@@ -67,6 +68,8 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
         {
             selectedProfileId = profileId;
             currentSave = null;
+            temporaryPlayerBlocks.Clear();
+            clientIdToGuid.Clear();
         }
 
         public void RegisterPlayerGuid(ulong clientId, string playerGuid)
@@ -85,7 +88,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
             currentSave = new SaveFile
             {
                 version = 1,
-                lastUpdate = DateTime.Now.ToBinary()
+                lastUpdate = DateTime.UtcNow.ToBinary()
             };
 
             temporaryPlayerBlocks.Clear();
@@ -100,7 +103,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
             RefreshModules();
 
             currentSave ??= new SaveFile();
-            currentSave.lastUpdate = DateTime.Now.ToBinary();
+            currentSave.lastUpdate = DateTime.UtcNow.ToBinary();
 
             currentSave.globalBlocks.Clear();
 
@@ -113,6 +116,8 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
 
                 currentSave.globalBlocks[module.SaveKey] = module.CaptureAsJson(context);
             }
+
+            currentSave.players.Clear();
 
             foreach (var kvp in temporaryPlayerBlocks)
             {
@@ -214,13 +219,13 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
             return playerBlocks.blocks.TryGetValue(saveKey, out json);
         }
 
-        public Dictionary<string, string> GetBufferedBlocks(string playerGuid)
+        public IReadOnlyDictionary<string, string> GetBufferedBlocks(string playerGuid)
         {
             if (temporaryPlayerBlocks.TryGetValue(playerGuid, out var collection))
             {
-                return collection.blocks;
+                return collection.ReadOnlyBlocks;
             }
-            return null;
+            return EmptyBlocks;
         }
     }
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using Newtonsoft.Json;
 
 namespace Assets._Keystone.Runtime.Scripts.DataPersistence.Data
 {
@@ -16,6 +18,11 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence.Data
     public class PlayerBlockCollection
     {
         public Dictionary<string, string> blocks = new();
+
+        [NonSerialized]
+        private ReadOnlyDictionary<string, string> _readOnlyBlocks;
+        [JsonIgnore]
+        public IReadOnlyDictionary<string, string> ReadOnlyBlocks => _readOnlyBlocks ??= new ReadOnlyDictionary<string, string>(blocks);
     }
 
     public enum SaveScope

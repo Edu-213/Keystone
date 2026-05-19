@@ -2,6 +2,10 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using Assets._Keystone.Runtime.Scripts.DataPersistence;
+using Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer;
+using System.Collections.Generic;
+using Assets._Keystone.Runtime.Scripts.Networking;
+using Assets._Keystone.Runtime.Scripts.Events;
 
 public class UITest : MonoBehaviour
 {
@@ -13,78 +17,120 @@ public class UITest : MonoBehaviour
     [SerializeField] private Button btnEnviarProBuffer;
     [SerializeField] private Button btnSalvarNoHD;
 
-    private PlayerNetworkSaveHub _cachedPlayer;
+    private NetworkPlayerSaveAgent _cachedPlayer;
+
+    void Awake()
+    {
+        NetworkEvents.OnPlayerSpawnRequested += HandlePlayersReadyToSpawn;
+    }
 
     private void Start()
     {
         DataPersistenceManager.Instance.ChangeSelectedProfile("Profile_Teste_Real");
 
-        btnSpawnarPlayer.onClick.AddListener(() =>
-        {
-            // O Spawn só pode ser comandado por quem é o Servidor/Host
-            if (!NetworkManager.Singleton.IsServer)
-            {
-                Debug.LogError("Apenas o Host/Server pode spawnar objetos na rede! Inicie o Host primeiro.");
-                return;
-            }
+        btnGanharMoeda.onClick.AddListener(AddCoins);
 
-            if (playerPrefab == null)
-            {
-                Debug.LogError("Esqueceu de arrastar o Prefab do Player no componente UITest!");
-                return;
-            }
+        btnEnviarProBuffer.onClick.AddListener(SendToBuffer);
 
-            // 1. Instancia o objeto normalmente no Unity
-            GameObject playerInstance = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
-
-            // 2. Pega o componente NetworkObject dele
-            NetworkObject netObj = playerInstance.GetComponent<NetworkObject>();
-
-            // 3. Spawna na rede dando a posse (Ownership) para o Host local (ID 0)
-            ulong localClientId = NetworkManager.Singleton.LocalClientId;
-            netObj.SpawnWithOwnership(localClientId);
-
-            Debug.Log($"<color=lime>[UI] Player spawnado dinamicamente com sucesso para o Cliente {localClientId}!</color>");
-        });
-
-        btnGanharMoeda.onClick.AddListener(() =>
-        {
-            var player = FindLocalPlayerHub();
-            if (player != null)
-            {
-                var stats = player?.GetComponentInChildren<PlayerStatsModule>();
-                stats.coins++;
-                Debug.Log($"Moedas locais do Player: {stats.coins}");
-            }
-        });
-
-        btnEnviarProBuffer.onClick.AddListener(() =>
-        {
-            var player = FindLocalPlayerHub();
-            player?.SaveLocalModulesToBuffer();
-        });
-
-        btnSalvarNoHD.onClick.AddListener(() =>
-        {
-            if (NetworkManager.Singleton.IsServer)
-            {
-                DataPersistenceManager.Instance.SaveGame();
-                Debug.Log("SALVO NO HD COM SUCESSO!");
-            }
-        });
+        btnSalvarNoHD.onClick.AddListener(SaveToDisk);
     }
 
-    private PlayerNetworkSaveHub FindLocalPlayerHub()
+    void OnDestroy()
     {
-        if (_cachedPlayer != null) return _cachedPlayer;
+        NetworkEvents.OnPlayerSpawnRequested -= HandlePlayersReadyToSpawn;
+    }
+
+    private void HandlePlayersReadyToSpawn(ulong clientId)
+    {
+        if (!NetworkManager.Singleton.IsServer)
+            return;
+
+
+        SpawnPlayerForClient(clientId);
+    }
+
+    private void SpawnPlayerForClient(ulong clientId)
+    {
+        if (playerPrefab == null)
+        {
+            Debug.LogError("Player prefab não configurado.");
+            return;
+        }
+
+        if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var clientData))
+        {
+            Debug.LogWarning($"Client {clientId} não está conectado.");
+            return;
+        }
+
+        if (clientData.PlayerObject != null)
+        {
+            Debug.LogWarning($"Client {clientId} já possui PlayerObject.");
+            return;
+        }
+
+        GameObject playerInstance = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
+        NetworkObject netObj = playerInstance.GetComponent<NetworkObject>();
+
+        netObj.SpawnAsPlayerObject(clientId);
+
+        Debug.Log($"[UI] Player spawnado para client {clientId}");
+    }
+
+    private void AddCoins()
+    {
+        var player = FindLocalPlayerAgent();
+        if (player == null)
+            return;
+
+        var stats = player.GetComponentInChildren<PlayerStatsModule>();
+        if (stats == null)
+        {
+            Debug.LogWarning("PlayerStatsModule não encontrado.");
+            return;
+        }
+
+        stats.coins++;
+        Debug.Log($"Moedas locais do Player: {stats.coins}");
+    }
+
+    private void SendToBuffer()
+    {
+        var player = FindLocalPlayerAgent();
+        player?.PushLocalModulesToServer();
+    }
+
+    private void SaveToDisk()
+    {
+        if (!NetworkManager.Singleton.IsServer)
+        {
+            Debug.LogWarning("Somente o servidor pode salvar no HD.");
+            return;
+        }
+
+        DataPersistenceManager.Instance.SaveGame();
+        Debug.Log("SALVO NO HD COM SUCESSO!");
+    }
+
+    private NetworkPlayerSaveAgent FindLocalPlayerAgent()
+    {
+        if (_cachedPlayer != null && _cachedPlayer.IsSpawned && _cachedPlayer.IsOwner)
+            return _cachedPlayer;
 
         // Procura o script na hierarquia da cena ativa
-        _cachedPlayer = Object.FindFirstObjectByType<PlayerNetworkSaveHub>();
+        var localPlayerObject = NetworkManager.Singleton.LocalClient?.PlayerObject;
+        if (localPlayerObject != null)
+        {
+            _cachedPlayer = localPlayerObject.GetComponent<NetworkPlayerSaveAgent>();
+            if (_cachedPlayer != null)
+                return _cachedPlayer;
+        }
+
+        var allAgents = FindObjectsByType<NetworkPlayerSaveAgent>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        _cachedPlayer = System.Array.Find(allAgents, a => a.IsOwner);
 
         if (_cachedPlayer == null)
-        {
-            Debug.LogWarning("Nenhum objeto com o script 'PlayerNetworkSaveHub' foi encontrado na cena ainda!");
-        }
+            Debug.LogWarning("Nenhum NetworkPlayerSaveAgent local foi encontrado.");
 
         return _cachedPlayer;
     }

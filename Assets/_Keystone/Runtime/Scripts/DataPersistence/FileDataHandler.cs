@@ -30,7 +30,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
 
         public SaveFile Load(string profileId, bool allowRestoreFromBackup = true)
         {
-            if (string.IsNullOrEmpty(profileId)) return null;
+            if (string.IsNullOrWhiteSpace(profileId)) return null;
 
             string fullPath = GetProfilePath(profileId);
             if (!File.Exists(fullPath)) return null;
@@ -40,8 +40,10 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
                 string dataToLoad = ReadFile(fullPath);
                 return JsonConvert.DeserializeObject<SaveFile>(dataToLoad);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Debug.LogWarning($"Failed to load save '{profileId}' from '{fullPath}': {e}");
+
                 if (allowRestoreFromBackup && AttemptRollback(fullPath))
                     return Load(profileId, false);
             }
@@ -51,24 +53,38 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
 
         public void Save(SaveFile data, string profileId)
         {
-            if (string.IsNullOrEmpty(profileId) || data == null) return;
+            if (string.IsNullOrWhiteSpace(profileId) || data == null) return;
 
             string fullPath = GetProfilePath(profileId);
-            string backupFilePath = fullPath + BackupExtension;
+            string dir = Path.GetDirectoryName(fullPath);
+            string tempPath = fullPath + ".tmp";
+            string backupPath = fullPath + BackupExtension;
 
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+                if (string.IsNullOrWhiteSpace(dir))
+                    throw new InvalidOperationException($"Invalid directory for save path: {fullPath}");
+
+                Directory.CreateDirectory(dir);
 
                 string dataToStore = JsonConvert.SerializeObject(data, Formatting.Indented);
-                WriteFile(fullPath, dataToStore);
+                WriteFile(tempPath, dataToStore);
 
-                if (Load(profileId) != null)
-                    File.Copy(fullPath, backupFilePath, true);
+                _ = JsonConvert.DeserializeObject<SaveFile>(ReadFile(tempPath));
+
+                if (File.Exists(fullPath))
+                    File.Replace(tempPath, fullPath, backupPath);
+                else
+                    File.Move(tempPath, fullPath);
             }
             catch (Exception e)
             {
                 Debug.LogError($"Error saving data to file {fullPath}: {e}");
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
             }
         }
 
@@ -84,6 +100,9 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
         public Dictionary<string, SaveFile> LoadAllProfiles()
         {
             var profileDictionary = new Dictionary<string, SaveFile>();
+
+            if (!Directory.Exists(_dataDirPath))
+                return profileDictionary;
 
             foreach (var dir in Directory.EnumerateDirectories(_dataDirPath))
             {
