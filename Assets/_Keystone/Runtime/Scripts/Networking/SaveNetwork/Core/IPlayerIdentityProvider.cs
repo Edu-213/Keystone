@@ -1,6 +1,6 @@
 namespace Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork.Core
 {
-    public interface INetworkPlayerIdentityProvider
+    public interface IPlayerIdentityProvider
     {
         string GetPersistentPlayerId(ulong ownerClientId);
     }

@@ -238,7 +238,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
 
                     HideLoading();
                     Debug.Log($"[SceneLoader] Client synchronized: {sceneEvent.ClientId}");
-                    NetworkEvents.RaiseClientGameplayReady(sceneEvent.ClientId);
+                    KeystoneEvents.RaiseClientGameplayReady(sceneEvent.ClientId);
 
                     ClearPendingNetworkLoad();
                     break;
@@ -270,7 +270,7 @@ namespace Assets._Keystone.Runtime.Scripts.SceneManagement
                 if (_networkManager.IsServer)
                 {
                     Debug.Log("[SceneLoader] Host gameplay scene ready.");
-                    NetworkEvents.RaiseHostGameplayReady();
+                    KeystoneEvents.RaiseHostGameplayReady();
                 }
             }
             catch (Exception ex)

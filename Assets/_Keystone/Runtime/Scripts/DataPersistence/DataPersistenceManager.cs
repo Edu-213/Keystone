@@ -12,6 +12,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
     {
         [Header("Debugging")]
         [SerializeField] private bool disableDataPersistence = false;
+        [SerializeField] private bool useFormatting = false;
 
         [Header("File Storage Config")]
         [SerializeField] private string fileName = "save.json";
@@ -25,7 +26,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
         private string selectedProfileId = "";
         private List<ISaveModule> modules = new();
 
-        private readonly Dictionary<ulong, string> clientIdToGuid = new();
+        private readonly Dictionary<ulong, string> clientIdToPersistentPlayerId = new();
         private readonly Dictionary<string, PlayerBlockCollection> temporaryPlayerBlocks = new();
         private static readonly IReadOnlyDictionary<string, string> EmptyBlocks = new Dictionary<string, string>();
 
@@ -53,15 +54,20 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
                 fileName,
                 encryptor,
                 useEncryption,
-                useCompression
+                useCompression,
+                useFormatting
             );
         }
 
-        public void RefreshModules()
+        public void RegisterModule(ISaveModule module)
         {
-            modules = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .OfType<ISaveModule>()
-                .ToList();
+            if (!modules.Contains(module))
+                modules.Add(module);
+        }
+
+        public void UnregisterModule(ISaveModule module)
+        {
+            modules.Remove(module);
         }
 
         public void ChangeSelectedProfile(string profileId)
@@ -69,17 +75,17 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
             selectedProfileId = profileId;
             currentSave = null;
             temporaryPlayerBlocks.Clear();
-            clientIdToGuid.Clear();
+            clientIdToPersistentPlayerId.Clear();
         }
 
-        public void RegisterPlayerGuid(ulong clientId, string playerGuid)
+        public void RegisterPlayerId(ulong clientId, string persistentPlayerId)
         {
-            clientIdToGuid[clientId] = playerGuid;
+            clientIdToPersistentPlayerId[clientId] = persistentPlayerId;
         }
 
-        public string GetPlayerGuid(ulong clientId)
+        public string GetPlayerId(ulong clientId)
         {
-            return clientIdToGuid.TryGetValue(clientId, out var guid) ? guid : null;
+            return clientIdToPersistentPlayerId.TryGetValue(clientId, out var guid) ? guid : null;
         }
 
         public void NewGame(string profileId)
@@ -99,8 +105,6 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
             if (disableDataPersistence) return;
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) return;
             if (string.IsNullOrWhiteSpace(selectedProfileId)) return;
-
-            RefreshModules();
 
             currentSave ??= new SaveFile();
             currentSave.lastUpdate = DateTime.UtcNow.ToBinary();
@@ -146,8 +150,6 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
             if (disableDataPersistence) return;
             if (string.IsNullOrWhiteSpace(selectedProfileId)) return;
 
-            RefreshModules();
-
             currentSave = dataHandler.Load(selectedProfileId);
             if (currentSave == null) return;
 
@@ -180,8 +182,6 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
         {
             if (currentSave == null) return;
             if (!currentSave.players.TryGetValue(playerGuid, out var playerBlocks)) return;
-
-            RefreshModules();
 
             bool isServer = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
 

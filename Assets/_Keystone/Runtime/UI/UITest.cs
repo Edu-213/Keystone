@@ -2,26 +2,21 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using Assets._Keystone.Runtime.Scripts.DataPersistence;
-using Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer;
-using System.Collections.Generic;
-using Assets._Keystone.Runtime.Scripts.Networking;
 using Assets._Keystone.Runtime.Scripts.Events;
+using Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork;
 
 public class UITest : MonoBehaviour
 {
     [Header("Configuração de Spawn")]
     [SerializeField] private GameObject playerPrefab;
 
-    [SerializeField] private Button btnSpawnarPlayer;
     [SerializeField] private Button btnGanharMoeda;
     [SerializeField] private Button btnEnviarProBuffer;
     [SerializeField] private Button btnSalvarNoHD;
 
-    private NetworkPlayerSaveAgent _cachedPlayer;
-
     void Awake()
     {
-        NetworkEvents.OnPlayerSpawnRequested += HandlePlayersReadyToSpawn;
+        KeystoneEvents.OnPlayerSpawnRequested += HandlePlayersReadyToSpawn;
     }
 
     private void Start()
@@ -37,9 +32,9 @@ public class UITest : MonoBehaviour
 
     void OnDestroy()
     {
-        NetworkEvents.OnPlayerSpawnRequested -= HandlePlayersReadyToSpawn;
+        KeystoneEvents.OnPlayerSpawnRequested -= HandlePlayersReadyToSpawn;
     }
-
+ 
     private void HandlePlayersReadyToSpawn(ulong clientId)
     {
         if (!NetworkManager.Singleton.IsServer)
@@ -79,11 +74,7 @@ public class UITest : MonoBehaviour
 
     private void AddCoins()
     {
-        var player = FindLocalPlayerAgent();
-        if (player == null)
-            return;
-
-        var stats = player.GetComponentInChildren<PlayerStatsModule>();
+        var stats = NetworkManager.Singleton.LocalClient?.PlayerObject?.GetComponentInChildren<PlayerStatsModule>();
         if (stats == null)
         {
             Debug.LogWarning("PlayerStatsModule não encontrado.");
@@ -96,8 +87,7 @@ public class UITest : MonoBehaviour
 
     private void SendToBuffer()
     {
-        var player = FindLocalPlayerAgent();
-        player?.PushLocalModulesToServer();
+        KeystoneEvents.RaisePlayerSyncRequested();
     }
 
     private void SaveToDisk()
@@ -110,28 +100,5 @@ public class UITest : MonoBehaviour
 
         DataPersistenceManager.Instance.SaveGame();
         Debug.Log("SALVO NO HD COM SUCESSO!");
-    }
-
-    private NetworkPlayerSaveAgent FindLocalPlayerAgent()
-    {
-        if (_cachedPlayer != null && _cachedPlayer.IsSpawned && _cachedPlayer.IsOwner)
-            return _cachedPlayer;
-
-        // Procura o script na hierarquia da cena ativa
-        var localPlayerObject = NetworkManager.Singleton.LocalClient?.PlayerObject;
-        if (localPlayerObject != null)
-        {
-            _cachedPlayer = localPlayerObject.GetComponent<NetworkPlayerSaveAgent>();
-            if (_cachedPlayer != null)
-                return _cachedPlayer;
-        }
-
-        var allAgents = FindObjectsByType<NetworkPlayerSaveAgent>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-        _cachedPlayer = System.Array.Find(allAgents, a => a.IsOwner);
-
-        if (_cachedPlayer == null)
-            Debug.LogWarning("Nenhum NetworkPlayerSaveAgent local foi encontrado.");
-
-        return _cachedPlayer;
     }
 }

@@ -1,36 +1,33 @@
 using System.Linq;
-using Assets._Keystone.Runtime.Scripts.DataPersistence;
 using Assets._Keystone.Runtime.Scripts.DataPersistence.Data;
 using Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork.Bridges;
 using Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork.Core;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer
+namespace Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork
 {
     [DisallowMultipleComponent]
-    public class NetworkPlayerSaveAgent : NetworkBehaviour
+    public class PlayerSaveAgent : NetworkBehaviour
     {
         private string _playerId;
         private ISaveModule[] _modules;
         private bool _initialized;
 
-        private INetworkPlayerIdentityProvider _identityProvider;
-        private INetworkSaveModuleLocator _moduleLocator;
-        private DataPersistenceManagerBridge _bridge;
-
-        public string PlayerId => _playerId;
+        private IPlayerIdentityProvider _identityProvider;
+        private ISaveModuleLocator _moduleLocator;
+        private IDataPersistenceBridge _bridge;
 
         private void Awake()
         {
-            _identityProvider = GetComponent<INetworkPlayerIdentityProvider>();
-            _moduleLocator = GetComponent<INetworkSaveModuleLocator>();
+            _identityProvider = GetComponent<IPlayerIdentityProvider>();
+            _moduleLocator = GetComponent<ISaveModuleLocator>();
 
             if (_identityProvider == null)
-                _identityProvider = GetComponentInChildren<INetworkPlayerIdentityProvider>();
+                _identityProvider = GetComponentInChildren<IPlayerIdentityProvider>();
 
             if (_moduleLocator == null)
-                _moduleLocator = GetComponentInChildren<INetworkSaveModuleLocator>();
+                _moduleLocator = GetComponentInChildren<ISaveModuleLocator>();
 
             _bridge = new DataPersistenceManagerBridge();
         }
@@ -54,9 +51,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer
                 return;
             }
 
-            _modules = _moduleLocator != null
-                ? _moduleLocator.GetModules()
-                : GetComponentsInChildren<ISaveModule>(true);
+            _modules = _moduleLocator != null ? _moduleLocator.GetModules() : GetComponentsInChildren<ISaveModule>(true);
 
             _playerId = _identityProvider.GetPersistentPlayerId(OwnerClientId);
             _initialized = true;
@@ -89,7 +84,7 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer
                     continue;
 
                 string jsonBlock = module.CaptureAsJson(context);
-                UpdateBufferRpc(_playerId, module.SaveKey, jsonBlock);
+                UpdateBufferRpc(module.SaveKey, jsonBlock);
             }
         }
 
@@ -100,15 +95,23 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer
         }
 
         [Rpc(SendTo.Server)]
-        private void UpdateBufferRpc(string playerId, string saveKey, string jsonBlock, RpcParams rpcParams = default)
+        private void UpdateBufferRpc(string saveKey, string jsonBlock, RpcParams rpcParams = default)
         {
+            var guid = _bridge.GetPlayerId(rpcParams.Receive.SenderClientId);
+
+            if (guid == null)
+            {
+                Debug.LogWarning($"[NetworkPlayerSaveAgent] GUID não encontrado para client {rpcParams.Receive.SenderClientId}");
+                return;
+            }
+
             if (rpcParams.Receive.SenderClientId != OwnerClientId)
             {
                 Debug.LogWarning($"[NetworkPlayerSaveAgent] Client {rpcParams.Receive.SenderClientId} tentou atualizar buffer de objeto owned por {OwnerClientId}");
                 return;
             }
 
-            _bridge.UpdatePlayerBlock(playerId, saveKey, jsonBlock);
+            _bridge.UpdatePlayerBlock(guid, saveKey, jsonBlock);
         }
 
         [Rpc(SendTo.Server)]

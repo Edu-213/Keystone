@@ -17,15 +17,17 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
         private readonly IEncryptor _encryptor;
         private readonly bool _useEncryption;
         private readonly bool _useCompression;
+        private readonly bool _useFormatting;
         private const string BackupExtension = ".bak";
 
-        public FileDataHandler(string dataDirPath, string dataFileName, IEncryptor encryptor, bool useEncryption, bool useCompression)
+        public FileDataHandler(string dataDirPath, string dataFileName, IEncryptor encryptor, bool useEncryption, bool useCompression, bool useFormatting)
         {
             _dataDirPath = dataDirPath;
             _dataFileName = dataFileName;
             _encryptor = encryptor;
             _useEncryption = useEncryption;
             _useCompression = useCompression;
+            _useFormatting = useFormatting;
         }
 
         public SaveFile Load(string profileId, bool allowRestoreFromBackup = true)
@@ -67,7 +69,8 @@ namespace Assets._Keystone.Runtime.Scripts.DataPersistence
 
                 Directory.CreateDirectory(dir);
 
-                string dataToStore = JsonConvert.SerializeObject(data, Formatting.Indented);
+                var formatting = _useFormatting ? Formatting.Indented : Formatting.None;
+                string dataToStore = JsonConvert.SerializeObject(data, formatting);
                 WriteFile(tempPath, dataToStore);
 
                 _ = JsonConvert.DeserializeObject<SaveFile>(ReadFile(tempPath));

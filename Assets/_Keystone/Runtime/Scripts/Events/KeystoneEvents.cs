@@ -1,14 +1,14 @@
 using System;
-using System.Collections.Generic;
 
 namespace Assets._Keystone.Runtime.Scripts.Events
 {
-    public static class NetworkEvents
+    public static class KeystoneEvents
     {
         public static event Action OnHostGameplayReady;
         public static event Action<ulong> OnClientGameplayReady;
         public static event Action<ulong> OnPlayerSpawnRequested;
         public static event Action<ulong> OnPlayerSpawned;
+        public static event Action OnPlayerSyncRequested;
 
         public static void RaiseHostGameplayReady()
         {
@@ -28,6 +28,11 @@ namespace Assets._Keystone.Runtime.Scripts.Events
         public static void RaisePlayerSpawned(ulong clientId)
         {
             OnPlayerSpawned?.Invoke(clientId);
+        }
+
+        public static void RaisePlayerSyncRequested()
+        {
+            OnPlayerSyncRequested?.Invoke();
         }
     }
 }

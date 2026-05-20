@@ -1,9 +1,12 @@
 using UnityEngine;
 using Assets._Keystone.Runtime.Scripts.DataPersistence.Data;
+using Assets._Keystone.Runtime.Scripts.DataPersistence;
 
 public class PlayerStatsModule : MonoBehaviour, ISaveModule
 {
-    // A chave que vai identificar esse bloco no dicionário do JSON
+    private void OnEnable() => DataPersistenceManager.Instance?.RegisterModule(this);
+    private void OnDisable() => DataPersistenceManager.Instance?.UnregisterModule(this);
+
     public string SaveKey => "player_stats";
     public SaveScope Scope => SaveScope.Player;
 

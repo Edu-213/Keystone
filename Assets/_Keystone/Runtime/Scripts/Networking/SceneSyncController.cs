@@ -1,20 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Assets._Keystone.Runtime.Scripts.DataPersistence;
 using Assets._Keystone.Runtime.Scripts.Events;
 using Assets._Keystone.Runtime.Scripts.SceneManagement;
 using Assets._Keystone.Runtime.Scripts.SceneManagement.Extensions;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Assets._Keystone.Runtime.Scripts.Networking
 {
     public class SceneSyncController : NetworkBehaviour
     {
-        private SceneGroup currentSceneGroup = null;
-        private bool playersSpawnedForCurrentLoad;
-
         private readonly HashSet<ulong> _spawnedClients = new();
         private bool _isLoadingGroup = false;
 
@@ -26,8 +23,8 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
         void Awake()
         {
             _networkManager = NetworkManager.Singleton;
-            NetworkEvents.OnHostGameplayReady += HandleHostGameplaySceneReady;
-            NetworkEvents.OnClientGameplayReady += HandleClientReadyLocalContext;
+            KeystoneEvents.OnHostGameplayReady += HandleHostGameplaySceneReady;
+            KeystoneEvents.OnClientGameplayReady += HandleClientReadyLocalContext;
 
             if (_networkManager != null)
                 _networkManager.OnClientDisconnectCallback += HandleClientDisconnected;
@@ -50,8 +47,8 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
         {
             base.OnDestroy();
 
-            NetworkEvents.OnHostGameplayReady -= HandleHostGameplaySceneReady;
-            NetworkEvents.OnClientGameplayReady -= HandleClientReadyLocalContext;
+            KeystoneEvents.OnHostGameplayReady -= HandleHostGameplaySceneReady;
+            KeystoneEvents.OnClientGameplayReady -= HandleClientReadyLocalContext;
 
             if (_networkManager != null)
                 _networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
@@ -74,7 +71,6 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             _isLoadingGroup = true;
             try
             {
-                currentSceneGroup = group;
                 _spawnedClients.Clear();
 
                 await SceneLoader.LoadSceneGroup(group, useNetworkScene: true);
@@ -109,6 +105,9 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
         {
             if (!IsServer) return;
 
+            DataPersistenceManager.Instance.ChangeSelectedProfile("Profile_Teste_Real");
+            DataPersistenceManager.Instance.LoadGame();
+            
             ulong hostClientId = _networkManager.LocalClientId;
             TryDispatchSpawn(hostClientId);
         }
@@ -129,7 +128,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             }
 
             Debug.Log($"[SceneSync] Disparando spawn para client {clientId}");
-            NetworkEvents.RaisePlayerSpawnRequested(clientId);
+            KeystoneEvents.RaisePlayerSpawnRequested(clientId);
         }
 
         private void HandleClientDisconnected(ulong clientId)
@@ -166,18 +165,6 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
                 if (waited >= timeoutMs)
                     throw new TimeoutException("Timeout esperando NetworkManager parar antes de carregar MainMenu.");
-            }
-        }
-
-        private async Task FireAndForgetLoadMainMenu()
-        {
-            try
-            {
-                await LoadMainMenuAfterShutdown();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Erro carregando MainMenu no cliente: {ex}");
             }
         }
     }
