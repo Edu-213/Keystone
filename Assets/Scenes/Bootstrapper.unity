@@ -119,6 +119,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &131942591 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2338441870572856079, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
+  m_PrefabInstance: {fileID: 145661680}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &145661680
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -190,7 +195,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2338441870572856079, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 673394749}
   m_SourcePrefab: {fileID: 100100000, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
 --- !u!1001 &150144551
 PrefabInstance:
@@ -252,8 +260,7 @@ PrefabInstance:
       propertyPath: NetworkConfig.NetworkTransport
       value: 
       objectReference: {fileID: 1293431508}
-    m_RemovedComponents:
-    - {fileID: 2981468120635285234, guid: 59388f125de5a6b40b51411cc10a6645, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -326,12 +333,27 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8932890900497119705, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
   m_PrefabInstance: {fileID: 145661680}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 131942591}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7e1f5648276317146a7ee7938e1188e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Scripts.Networking.SteamNetcodeBridge
+--- !u!114 &673394749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131942591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32368a90ba452d24eb598fee65dc0282, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.Networking.Provider.LanTransportProvider
+  _transport: {fileID: 1293431508}
+  _hostAddress: 127.0.0.1
+  _port: 7777
 --- !u!1 &722208650
 GameObject:
   m_ObjectHideFlags: 0

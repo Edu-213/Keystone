@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Assets._Keystone.Runtime.Scripts.SceneManagement;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
         private const string HostAddressKey = "HostSteamId";
         private const string LobbyNameKey = "LobbyName";
+        private SceneGroup _pendingSceneGroup;
 
         private void Awake()
         {
@@ -43,11 +45,11 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
 
         public void OnClickLeave()
         {
-            SteamLobbyHandler.Instance.LeaveCurrentLobby();
+            LeaveCurrentLobby();
         }
         // ==========================================================
 
-        public async Task CreateLobbyAsync(int maxPlayers = 4, string lobbyName = "Nova Sala")
+        public async Task CreateLobbyAsync(int maxPlayers = 4, string lobbyName = "Nova Sala", SceneGroup sceneGroup = null)
         {
             if (!CanUseSteam())
                 return;
@@ -55,6 +57,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             if (CurrentLobby.HasValue)
                 LeaveCurrentLobby();
 
+            _pendingSceneGroup = sceneGroup;
             _pendingLobbyName = lobbyName;
             await SteamMatchmaking.CreateLobbyAsync(maxPlayers);
         }
@@ -89,6 +92,9 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
                 CurrentLobby = null;
             }
 
+            _pendingSceneGroup = null;
+            _pendingLobbyName = "Nova Sala";
+
             ClearRichPresence();
             SteamNetcodeBridge.Instance?.Shutdown();
         }
@@ -115,7 +121,7 @@ namespace Assets._Keystone.Runtime.Scripts.Networking
             SteamFriends.SetRichPresence("steam_player_group", lobby.Id.ToString());
             SteamFriends.SetRichPresence("steam_player_group_size", lobby.MemberCount.ToString());
 
-            bool hostStarted = SteamNetcodeBridge.Instance != null && SteamNetcodeBridge.Instance.StartHost();
+            bool hostStarted = SteamNetcodeBridge.Instance != null && SteamNetcodeBridge.Instance.StartHost(_pendingSceneGroup);
             if (!hostStarted)
             {
                 Debug.LogError("[Lobby] Lobby criado, mas o host do Netcode falhou ao iniciar.");

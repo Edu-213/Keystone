@@ -1092,7 +1092,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MainMenu
   _hostButton: {fileID: 26103757}
   _clientButton: {fileID: 244890350}
-  faseInicial: {fileID: 11400000, guid: 9643425c191851a4cbd00ae7764260bd, type: 2}
+  _singleplayerButton: {fileID: 0}
+  _faseInicial: {fileID: 11400000, guid: 9643425c191851a4cbd00ae7764260bd, type: 2}
 --- !u!1 &1524928721
 GameObject:
   m_ObjectHideFlags: 0
@@ -1325,7 +1326,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1793575401
 MonoBehaviour:
   m_ObjectHideFlags: 0

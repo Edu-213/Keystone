@@ -9,7 +9,10 @@ public class MainMenu : MonoBehaviour
     [Header("Botões do Menu")]
     [SerializeField] private Button _hostButton;
     [SerializeField] private Button _clientButton;
-    [SerializeField] private SceneGroup faseInicial;
+    [SerializeField] private Button _singleplayerButton;
+    [SerializeField] private SceneGroup _faseInicial;
+
+    private bool IsSteam => SteamLobbyHandler.Instance != null;
 
     private void Start()
     {
@@ -24,33 +27,39 @@ public class MainMenu : MonoBehaviour
             _clientButton.onClick.RemoveAllListeners();
             _clientButton.onClick.AddListener(OnClientClicked);
         }
+
+        _singleplayerButton?.onClick.AddListener(OnSingleplayerClicked);
     }
 
     private void OnHostClicked()
     {
-        if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is Netcode.Transports.Facepunch.FacepunchTransport)
+        if (IsSteam)
         {
             _ = SteamLobbyHandler.Instance.CreateLobbyAsync(4, "Teste");
         }
         else
         {
-            Debug.Log("[DEBUG] Iniciando Host via UnityTransport (Sem Steam)");
-            SteamNetcodeBridge.Instance.StartHost(faseInicial);
+            SteamNetcodeBridge.Instance.StartHost(_faseInicial);
         }
     }
 
     private void OnClientClicked()
     {
-        if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is Netcode.Transports.Facepunch.FacepunchTransport)
+        if (IsSteam)
         {
-            string lobbyIdText = "dasd";
-            if (ulong.TryParse(lobbyIdText, out ulong lobbyId))
-                _ = SteamLobbyHandler.Instance.JoinLobbyByIdAsync(lobbyId);
+            //string lobbyIdText = "dasd";
+            // if (ulong.TryParse(lobbyIdText, out ulong lobbyId))
+            //     _ = SteamLobbyHandler.Instance.JoinLobbyByIdAsync(lobbyId);
         }
         else
         {
             Debug.Log("[DEBUG] Iniciando Client via UnityTransport (Conectando em 127.0.0.1)");
             SteamNetcodeBridge.Instance.StartClient(0);
         }
+    }
+
+    private void OnSingleplayerClicked()
+    {
+        SteamNetcodeBridge.Instance.StartSingleplayer(_faseInicial);
     }
 }
