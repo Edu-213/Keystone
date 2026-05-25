@@ -1,5 +1,5 @@
 ﻿<Solution>
-  <Project Path="Keystone.Multiplayer.Runtime.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Keystone.Multiplayer.Runtime.csproj" />
   <Project Path="Facepunch Transport for Netcode for GameObjects.csproj" />
 </Solution>
