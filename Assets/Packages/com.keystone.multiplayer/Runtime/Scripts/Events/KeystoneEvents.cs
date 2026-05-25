@@ -1,0 +1,38 @@
+using System;
+
+namespace Keystone.Multiplayer.Events
+{
+    public static class KeystoneEvents
+    {
+        public static event Action OnHostGameplayReady;
+        public static event Action<ulong> OnClientGameplayReady;
+        public static event Action<ulong> OnPlayerSpawnRequested;
+        public static event Action<ulong> OnPlayerSpawned;
+        public static event Action OnPlayerSyncRequested;
+
+        public static void RaiseHostGameplayReady()
+        {
+            OnHostGameplayReady?.Invoke();
+        }
+
+        public static void RaiseClientGameplayReady(ulong clientId)
+        {
+            OnClientGameplayReady?.Invoke(clientId);
+        }
+
+        public static void RaisePlayerSpawnRequested(ulong clientId)
+        {
+            OnPlayerSpawnRequested?.Invoke(clientId);
+        }
+
+        public static void RaisePlayerSpawned(ulong clientId)
+        {
+            OnPlayerSpawned?.Invoke(clientId);
+        }
+
+        public static void RaisePlayerSyncRequested()
+        {
+            OnPlayerSyncRequested?.Invoke();
+        }
+    }
+}
