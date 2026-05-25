@@ -1,0 +1,19 @@
+{
+    "name": "Keystone.Multiplayer.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Netcode.Runtime",
+        "Facepunch Transport for Netcode for GameObjects",
+        "Unity.Networking.Transport",
+        "Eflatun.SceneReference"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

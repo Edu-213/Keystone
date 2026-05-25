@@ -1,5 +1,4 @@
 using Unity.Netcode;
-using Steamworks;
 using UnityEngine;
 using Assets._Keystone.Runtime.Scripts.SceneManagement;
 using Assets._Keystone.Runtime.Scripts.SceneManagement.Extensions;
@@ -8,7 +7,6 @@ using Assets._Keystone.Runtime.Scripts.Networking.Interface;
 
 namespace Assets._Keystone.Runtime.Scripts.Networking
 {
-    [RequireComponent(typeof(INetworkTransportProvider))]
     public class SteamNetcodeBridge : MonoBehaviour
     {
         public enum NetworkSessionState
