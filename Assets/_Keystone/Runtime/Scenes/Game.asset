@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 557f04f7185dee340a71296f7bb3cb83, type: 3}
+  m_Script: {fileID: 11500000, guid: c19ffd3fef7441a49b49ea5468b042bf, type: 3}
   m_Name: Game
   m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.SceneManagement.SceneGroup
-  GroupName: Game
+  GroupName: FaseInicial
   Scenes:
   - reference:
       asset: {fileID: 102900000, guid: f3d3933900bbd7842bbbc084c2b035c0, type: 3}

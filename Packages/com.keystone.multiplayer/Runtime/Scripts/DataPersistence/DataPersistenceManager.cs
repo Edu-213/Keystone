@@ -226,5 +226,10 @@ namespace Keystone.Multiplayer.DataPersistence
             }
             return EmptyBlocks;
         }
+
+        public Dictionary<string, SaveFile> GetAllProfilesSaveFile()
+        {
+            return dataHandler.LoadAllProfiles();
+        }
     }
 }

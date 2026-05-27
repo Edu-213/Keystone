@@ -124,6 +124,34 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 2338441870572856079, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
   m_PrefabInstance: {fileID: 145661680}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &131942592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131942591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1af7138361ee5bc4aac23546149d10b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.Networking.Providers.LanTransportProvider
+  _transport: {fileID: 1293431508}
+  _hostAddress: 127.0.0.1
+  _port: 7777
+--- !u!114 &131942593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131942591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb8fd262718fc5246854893725ea5665, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.Networking.SteamNetcodeBridge
+  _networkManager: {fileID: 150144553}
 --- !u!1001 &145661680
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -192,13 +220,17 @@ PrefabInstance:
       propertyPath: sceneSyncController
       value: 
       objectReference: {fileID: 1144076095}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 8932890900497119705, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 2338441870572856079, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 673394749}
+      addedObject: {fileID: 131942593}
+    - targetCorrespondingSourceObject: {fileID: 2338441870572856079, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 131942592}
   m_SourcePrefab: {fileID: 100100000, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
 --- !u!1001 &150144551
 PrefabInstance:
@@ -288,7 +320,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 380576416}
-  - component: {fileID: 380576415}
+  - component: {fileID: 380576417}
   m_Layer: 0
   m_Name: SceneLoader
   m_TagString: Untagged
@@ -296,23 +328,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &380576415
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 380576414}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d2532b69cc00e6499b194975589c680, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.SceneManagement.SceneLoader
-  _loadingBar: {fileID: 766596267}
-  _fillSpeed: 0.5
-  _loadingCanvas: {fileID: 1058910714}
-  _loadingCamera: {fileID: 1241711363}
-  _mainMenuGroup: {fileID: 11400000, guid: 728e70c5ab8ab984eb38aee169fbd4fc, type: 2}
 --- !u!4 &380576416
 Transform:
   m_ObjectHideFlags: 0
@@ -328,32 +343,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 722208652}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &673394748 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 8932890900497119705, guid: 9c934007b5feb21489803272fe67d01b, type: 3}
-  m_PrefabInstance: {fileID: 145661680}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 131942591}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7e1f5648276317146a7ee7938e1188e9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Scripts.Networking.SteamNetcodeBridge
---- !u!114 &673394749
+--- !u!114 &380576417
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 131942591}
+  m_GameObject: {fileID: 380576414}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 32368a90ba452d24eb598fee65dc0282, type: 3}
+  m_Script: {fileID: 11500000, guid: fb353b1df060951469d8861f5f2a0eae, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.Networking.Provider.LanTransportProvider
-  _transport: {fileID: 1293431508}
-  _hostAddress: 127.0.0.1
-  _port: 7777
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.SceneManagement.SceneLoader
+  _loadingBar: {fileID: 766596267}
+  _fillSpeed: 2
+  _loadingCanvas: {fileID: 1058910714}
+  _loadingCamera: {fileID: 1241711363}
+  _mainMenuGroup: {fileID: 11400000, guid: 728e70c5ab8ab984eb38aee169fbd4fc, type: 2}
 --- !u!1 &722208650
 GameObject:
   m_ObjectHideFlags: 0
@@ -363,7 +369,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 722208652}
-  - component: {fileID: 722208651}
+  - component: {fileID: 722208653}
   m_Layer: 0
   m_Name: GlobalSystems
   m_TagString: Untagged
@@ -371,21 +377,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &722208651
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 722208650}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e09a565d481e6c647b7e6dc30cacc113, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.SceneManagement.SceneManagementBootstrapper
-  _sceneLoader: {fileID: 380576415}
-  _steamBridge: {fileID: 673394748}
-  _sceneSyncController: {fileID: 1144076095}
 --- !u!4 &722208652
 Transform:
   m_ObjectHideFlags: 0
@@ -405,6 +396,21 @@ Transform:
   - {fileID: 1144076096}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &722208653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 722208650}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ed9c8c5de334c44890bc17bbee93fec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.SceneManagement.SceneManagementBootstrapper
+  _sceneLoader: {fileID: 0}
+  _steamBridge: {fileID: 0}
+  _sceneSyncController: {fileID: 0}
 --- !u!1 &766596264
 GameObject:
   m_ObjectHideFlags: 0
@@ -879,11 +885,33 @@ PrefabInstance:
       propertyPath: m_Name
       value: GameNetwork
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6805393770301789303, guid: bb87618d2ae4eb84d81a435c67d06a08, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5576263063890004018, guid: bb87618d2ae4eb84d81a435c67d06a08, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1493832939}
   m_SourcePrefab: {fileID: 100100000, guid: bb87618d2ae4eb84d81a435c67d06a08, type: 3}
+--- !u!1 &1493832938 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5576263063890004018, guid: bb87618d2ae4eb84d81a435c67d06a08, type: 3}
+  m_PrefabInstance: {fileID: 1493832937}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1493832939
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493832938}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28bdf19cb2effc34b910efa4d2d5e203, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.Networking.GameNetworkManager
+  appId: 480
 --- !u!1 &1608088856
 GameObject:
   m_ObjectHideFlags: 0
@@ -1174,7 +1202,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2141797867}
-  - component: {fileID: 2141797866}
+  - component: {fileID: 2141797868}
   m_Layer: 0
   m_Name: DataPersistenceManager
   m_TagString: Untagged
@@ -1182,23 +1210,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2141797866
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2141797865}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68869294d2a8bca43b05e496302ce371, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.DataPersistence.DataPersistenceManager
-  disableDataPersistence: 0
-  useFormatting: 0
-  fileName: save.json
-  useEncryption: 0
-  useCompression: 0
 --- !u!4 &2141797867
 Transform:
   m_ObjectHideFlags: 0
@@ -1214,6 +1225,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2141797868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141797865}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 478f5507be779ae42a7a96ec22a00235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.DataPersistence.DataPersistenceManager
+  disableDataPersistence: 0
+  useFormatting: 0
+  fileName: save.json
+  useEncryption: 0
+  useCompression: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
