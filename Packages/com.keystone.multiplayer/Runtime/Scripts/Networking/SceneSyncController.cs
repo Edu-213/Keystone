@@ -105,7 +105,6 @@ namespace Keystone.Multiplayer.Networking
         {
             if (!IsServer) return;
 
-            DataPersistenceManager.Instance.ChangeSelectedProfile("Profile_Teste_Real");
             DataPersistenceManager.Instance.LoadGame();
             
             ulong hostClientId = _networkManager.LocalClientId;

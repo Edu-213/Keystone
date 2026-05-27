@@ -55,9 +55,9 @@ GameObject:
   m_Component:
   - component: {fileID: 3954833124334470962}
   - component: {fileID: 5603378969454478527}
-  - component: {fileID: 7277487363904551749}
-  - component: {fileID: 4253415921288261945}
-  - component: {fileID: 3171145811733475013}
+  - component: {fileID: 6265981786535468663}
+  - component: {fileID: 6913901165953755096}
+  - component: {fileID: 6860937315425038228}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -106,7 +106,7 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &7277487363904551749
+--- !u!114 &6265981786535468663
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -115,11 +115,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 7939709329492067046}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3025edf10dcc4f04fab67548d55fed36, type: 3}
+  m_Script: {fileID: 11500000, guid: 85a4a3084100b024cbdf816930d217f3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.DataPersistence.Multiplayer.NetworkPlayerSaveAgent
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.Networking.SaveNetwork.PlayerSaveAgent
   ShowTopMostFoldoutHeaderGroup: 1
---- !u!114 &4253415921288261945
+--- !u!114 &6913901165953755096
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -128,20 +128,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 7939709329492067046}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 598f59946a35949479782c371efcb2f5, type: 3}
+  m_Script: {fileID: 11500000, guid: e8d31a5d3d3fb77439e2c0986cb18a3e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork.NetcodePlayerIdentityProvider
---- !u!114 &3171145811733475013
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7939709329492067046}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ed53075f2bf141545b5e613ceac00d40, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Assets._Keystone.Runtime.Scripts.Networking.SaveNetwork.PlayerSaveSync
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.Networking.SaveNetwork.PlayerSaveSync
   autoSyncInterval: 30
   useAutoSync: 1
+--- !u!114 &6860937315425038228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7939709329492067046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f292b5928d80cc3499cd4609f76d89f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Keystone.Multiplayer.Runtime::Keystone.Multiplayer.Networking.SaveNetwork.PlayerIdentityProvider
